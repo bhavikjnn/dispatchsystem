@@ -1,6 +1,6 @@
 import { hash, compare } from "bcryptjs"
 import { cookies } from "next/headers"
-import { jwtVerify, jwtSign } from "jose"
+import { jwtVerify, CompactSign } from "jose"
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "your-secret-key-change-in-production")
 
@@ -22,8 +22,14 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 }
 
 export async function createToken(userId: string, email: string, role: string): Promise<string> {
-  return await jwtSign({ userId, email, role }, JWT_SECRET, { expiresIn: "7d" })
+  const payload = new TextEncoder().encode(JSON.stringify({ userId, email, role, exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7 }))
+  const protectedHeader = { alg: "HS256", typ: "JWT" }
+  const jwt = await new CompactSign(payload)
+    .setProtectedHeader(protectedHeader)
+    .sign(JWT_SECRET)
+  return jwt
 }
+
 
 export async function verifyToken(token: string) {
   try {

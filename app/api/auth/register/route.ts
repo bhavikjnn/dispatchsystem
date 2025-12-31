@@ -42,7 +42,15 @@ export async function POST(request: NextRequest) {
       maxAge: 7 * 24 * 60 * 60,
     })
 
-    return NextResponse.json({ success: true, userId: result.insertedId }, { status: 201 })
+    return NextResponse.json({
+      success: true,
+      user: {
+        id: result.insertedId,
+        email,
+        name,
+        role,
+      },
+    }, { status: 201 })
   } catch (error) {
     console.error("Registration error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
