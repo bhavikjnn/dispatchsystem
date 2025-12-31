@@ -6,6 +6,7 @@
     "build": "next build",
     "dev": "next dev",
     "lint": "eslint .",
+    "seed": "tsx scripts/seed-sample-data.ts",
     "start": "next start"
   },
   "dependencies": {
@@ -77,6 +78,7 @@
     "@types/react-dom": "^19",
     "postcss": "^8.5",
     "tailwindcss": "^4.1.9",
+    "tsx": "^4.7.0",
     "tw-animate-css": "1.3.3",
     "typescript": "^5"
   }
