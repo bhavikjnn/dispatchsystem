@@ -1,13 +1,21 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 
 interface FilterPanelProps {
   onFilter: (filters: Record<string, any>) => void
+}
+
+interface FilterOptions {
+  companies: string[]
+  destinations: string[]
+  transporters: string[]
+  bookingTypes: string[]
+  paymentStatuses: string[]
 }
 
 export default function AdminFilterPanel({ onFilter }: FilterPanelProps) {
@@ -20,6 +28,34 @@ export default function AdminFilterPanel({ onFilter }: FilterPanelProps) {
     startDate: "",
     endDate: "",
   })
+
+  const [options, setOptions] = useState<FilterOptions>({
+    companies: [],
+    destinations: [],
+    transporters: [],
+    bookingTypes: [],
+    paymentStatuses: [],
+  })
+
+  const [loadingOptions, setLoadingOptions] = useState(true)
+
+  useEffect(() => {
+    const fetchFilterOptions = async () => {
+      try {
+        const response = await fetch("/api/orders/filter-options")
+        if (response.ok) {
+          const data = await response.json()
+          setOptions(data)
+        }
+      } catch (error) {
+        console.error("Error fetching filter options:", error)
+      } finally {
+        setLoadingOptions(false)
+      }
+    }
+
+    fetchFilterOptions()
+  }, [])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -43,46 +79,74 @@ export default function AdminFilterPanel({ onFilter }: FilterPanelProps) {
     onFilter({})
   }
 
+  const activeFilterCount = Object.values(filters).filter((v) => v !== "").length
+
   return (
     <Card className="p-8 bg-card border border-border">
-      <h3 className="text-lg font-semibold text-foreground mb-2">Filter Orders</h3>
-      <p className="text-muted-foreground text-sm mb-6">Refine your search using the filters below</p>
+      <div className="flex justify-between items-start mb-6">
+        <div>
+          <h3 className="text-lg font-semibold text-foreground mb-2">Filter Orders</h3>
+          <p className="text-muted-foreground text-sm">
+            {activeFilterCount > 0
+              ? `${activeFilterCount} active filter${activeFilterCount !== 1 ? "s" : ""}`
+              : "Refine your search using the filters below"}
+          </p>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         <div>
           <label className="block text-sm font-medium text-foreground mb-2">Company Name</label>
-          <Input
+          <input
             type="text"
             name="company"
             value={filters.company}
             onChange={handleChange}
             placeholder="Search company..."
+            list="companies-list"
             className="w-full bg-input border border-border text-foreground input-focus rounded-lg px-4 py-2"
           />
+          <datalist id="companies-list">
+            {options.companies.map((company) => (
+              <option key={company} value={company} />
+            ))}
+          </datalist>
         </div>
 
         <div>
           <label className="block text-sm font-medium text-foreground mb-2">Destination</label>
-          <Input
+          <input
             type="text"
             name="destination"
             value={filters.destination}
             onChange={handleChange}
             placeholder="Search destination..."
+            list="destinations-list"
             className="w-full bg-input border border-border text-foreground input-focus rounded-lg px-4 py-2"
           />
+          <datalist id="destinations-list">
+            {options.destinations.map((dest) => (
+              <option key={dest} value={dest} />
+            ))}
+          </datalist>
         </div>
 
         <div>
           <label className="block text-sm font-medium text-foreground mb-2">Transporter</label>
-          <Input
+          <input
             type="text"
             name="transporter"
             value={filters.transporter}
             onChange={handleChange}
             placeholder="Search transporter..."
+            list="transporters-list"
             className="w-full bg-input border border-border text-foreground input-focus rounded-lg px-4 py-2"
           />
+          <datalist id="transporters-list">
+            {options.transporters.map((trans) => (
+              <option key={trans} value={trans} />
+            ))}
+          </datalist>
         </div>
 
         <div>
@@ -94,9 +158,11 @@ export default function AdminFilterPanel({ onFilter }: FilterPanelProps) {
             className="w-full px-4 py-2 border border-border rounded-lg text-sm bg-input text-foreground input-focus"
           >
             <option value="">All Types</option>
-            <option value="Standard">Standard</option>
-            <option value="Express">Express</option>
-            <option value="Priority">Priority</option>
+            {options.bookingTypes.map((type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -109,8 +175,11 @@ export default function AdminFilterPanel({ onFilter }: FilterPanelProps) {
             className="w-full px-4 py-2 border border-border rounded-lg text-sm bg-input text-foreground input-focus"
           >
             <option value="">All Status</option>
-            <option value="Paid">Paid</option>
-            <option value="To Pay">To Pay</option>
+            {options.paymentStatuses.map((status) => (
+              <option key={status} value={status}>
+                {status}
+              </option>
+            ))}
           </select>
         </div>
 

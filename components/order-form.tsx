@@ -7,8 +7,18 @@ import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 
-const BOOKING_TYPES = ["Standard", "Express", "Priority"]
+const BOOKING_TYPES = ["Standard", "Express", "Priority", "Door Delivery"]
 const PAYMENT_TYPES = ["Paid", "To Pay"]
+const PAYMENT_DETAILS_OPTIONS = [
+  "100% Advance Received",
+  "100% Against Delivery",
+  "50% Advance, 50% Against Delivery",
+  "NEFT Payment",
+  "Credit Term 30 Days",
+  "Bank Transfer",
+  "Credit Card",
+  "Check Payment",
+]
 
 interface OrderFormData {
   companyName: string
@@ -149,7 +159,7 @@ export default function OrderForm({ onSuccess }: { onSuccess?: () => void }) {
               onChange={handleChange}
               required
               className="w-full bg-input border border-border text-foreground input-focus rounded-lg px-4 py-2"
-              placeholder="ABC Trading Co."
+              placeholder="e.g., Paras Polymers"
             />
           </div>
           <div>
@@ -161,7 +171,7 @@ export default function OrderForm({ onSuccess }: { onSuccess?: () => void }) {
               onChange={handleChange}
               required
               className="w-full bg-input border border-border text-foreground input-focus rounded-lg px-4 py-2"
-              placeholder="John Smith"
+              placeholder="e.g., Mr. Neel"
             />
           </div>
         </div>
@@ -176,7 +186,7 @@ export default function OrderForm({ onSuccess }: { onSuccess?: () => void }) {
               onChange={handleChange}
               required
               className="w-full bg-input border border-border text-foreground input-focus rounded-lg px-4 py-2"
-              placeholder="+1 (555) 000-0000"
+              placeholder="+91 7201877472"
             />
           </div>
           <div>
@@ -203,7 +213,7 @@ export default function OrderForm({ onSuccess }: { onSuccess?: () => void }) {
               onChange={handleChange}
               required
               className="w-full bg-input border border-border text-foreground input-focus rounded-lg px-4 py-2"
-              placeholder="ORD-2025-001"
+              placeholder="e.g., By Phone"
             />
           </div>
           <div>
@@ -215,7 +225,7 @@ export default function OrderForm({ onSuccess }: { onSuccess?: () => void }) {
               onChange={handleChange}
               required
               className="w-full bg-input border border-border text-foreground input-focus rounded-lg px-4 py-2"
-              placeholder="New York, NY"
+              placeholder="e.g., Delhi"
             />
           </div>
         </div>
@@ -230,7 +240,7 @@ export default function OrderForm({ onSuccess }: { onSuccess?: () => void }) {
               onChange={handleChange}
               required
               className="w-full bg-input border border-border text-foreground input-focus rounded-lg px-4 py-2"
-              placeholder="INV-2025-001"
+              placeholder="e.g., INV-2025-001"
             />
           </div>
           <div>
@@ -254,7 +264,7 @@ export default function OrderForm({ onSuccess }: { onSuccess?: () => void }) {
             onChange={handleChange}
             required
             className="w-full bg-input border border-border text-foreground input-focus rounded-lg px-4 py-3 min-h-24"
-            placeholder="Describe the items being shipped..."
+            placeholder="e.g., Spare parts, Electronic components, Textile materials..."
           />
         </div>
 
@@ -264,7 +274,7 @@ export default function OrderForm({ onSuccess }: { onSuccess?: () => void }) {
             <Input
               type="number"
               name="rate"
-              value={formData.rate}
+              value={formData.rate || ""}
               onChange={handleChange}
               required
               step="0.01"
@@ -277,7 +287,7 @@ export default function OrderForm({ onSuccess }: { onSuccess?: () => void }) {
             <Input
               type="number"
               name="qty"
-              value={formData.qty}
+              value={formData.qty || ""}
               onChange={handleChange}
               required
               step="1"
@@ -290,7 +300,7 @@ export default function OrderForm({ onSuccess }: { onSuccess?: () => void }) {
             <Input
               type="number"
               name="amount"
-              value={formData.amount}
+              value={formData.amount || ""}
               onChange={handleChange}
               required
               step="0.01"
@@ -310,7 +320,7 @@ export default function OrderForm({ onSuccess }: { onSuccess?: () => void }) {
               onChange={handleChange}
               required
               className="w-full bg-input border border-border text-foreground input-focus rounded-lg px-4 py-2"
-              placeholder="FastShip Logistics"
+              placeholder="e.g., DTDC Courier"
             />
           </div>
           <div>
@@ -348,14 +358,19 @@ export default function OrderForm({ onSuccess }: { onSuccess?: () => void }) {
           </div>
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">Payment Details</label>
-            <Input
-              type="text"
+            <select
               name="paymentDetails"
               value={formData.paymentDetails}
               onChange={handleChange}
-              className="w-full bg-input border border-border text-foreground input-focus rounded-lg px-4 py-2"
-              placeholder="Bank transfer, Credit card, etc."
-            />
+              className="w-full px-4 py-2 border border-border rounded-lg text-sm bg-input text-foreground input-focus"
+            >
+              <option value="">Select payment details...</option>
+              {PAYMENT_DETAILS_OPTIONS.map((detail) => (
+                <option key={detail} value={detail}>
+                  {detail}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
