@@ -11,22 +11,32 @@ function convertToCSV(data: any[], visibleFields: string[]): string {
         headers.map((field) => {
             const value = item[field];
             if (value === null || value === undefined) return "";
-            if (
-                typeof value === "string" &&
-                (value.includes(",") ||
-                    value.includes('"') ||
-                    value.includes("\n"))
-            ) {
-                return `"${value.replace(/"/g, '""')}"`;
+
+            // Handle phone numbers and invoice numbers - use tab prefix to force text
+            if (field === "contactNo" || field === "invoiceNo") {
+                return `"\t${value}"`; // Tab prefix forces Excel to treat as text
             }
+
+            // Handle dates
             if (value instanceof Date) {
                 return value.toLocaleDateString();
             }
+
+            // Handle all strings - wrap in quotes to preserve formatting
+            if (typeof value === "string") {
+                return `"${value.replace(/"/g, '""')}"`;
+            }
+
             return value;
         })
     );
 
-    return [headers.join(","), ...rows.map((row) => row.join(","))].join("\n");
+    // Add BOM for proper UTF-8 encoding in Excel
+    const BOM = "\uFEFF";
+    return (
+        BOM +
+        [headers.join(","), ...rows.map((row) => row.join(","))].join("\n")
+    );
 }
 
 export async function POST(request: NextRequest) {
@@ -66,11 +76,12 @@ export async function POST(request: NextRequest) {
         if (filters && Object.keys(filters).length > 0) {
             if (filters.company)
                 query.companyName = { $regex: filters.company, $options: "i" };
-            if (filters.destination)
-                query.destination = {
-                    $regex: filters.destination,
-                    $options: "i",
-                };
+            if (filters.city)
+                query.city = { $regex: filters.city, $options: "i" };
+            if (filters.state)
+                query.state = { $regex: filters.state, $options: "i" };
+            if (filters.country)
+                query.country = { $regex: filters.country, $options: "i" };
             if (filters.transporter)
                 query.transporterName = {
                     $regex: filters.transporter,
@@ -88,13 +99,13 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        const orders = await db.collection("orders").find(query).toArray();
+        const records = await db.collection("records").find(query).toArray();
 
         // Filter fields based on visibility
-        const filteredOrders = orders.map((order) => {
+        const filteredRecords = records.map((record) => {
             const filtered: any = {};
             visibleFieldNames.forEach((field) => {
-                filtered[field] = order[field];
+                filtered[field] = record[field];
             });
             return filtered;
         });
@@ -108,16 +119,16 @@ export async function POST(request: NextRequest) {
                 Object.keys(filters || {}).length > 0 ? "filtered" : "full",
             filters: filters || {},
             downloadedAt: new Date(),
-            recordCount: filteredOrders.length,
+            recordCount: filteredRecords.length,
         });
 
         // Convert to CSV
-        const csv = convertToCSV(filteredOrders, visibleFieldNames);
+        const csv = convertToCSV(filteredRecords, visibleFieldNames);
 
         return new NextResponse(csv, {
             headers: {
                 "Content-Type": "text/csv; charset=utf-8",
-                "Content-Disposition": `attachment; filename="orders-${
+                "Content-Disposition": `attachment; filename="records-${
                     new Date().toISOString().split("T")[0]
                 }.csv"`,
             },

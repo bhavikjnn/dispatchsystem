@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import OrderForm from "@/components/order-form";
-import OrdersTable from "@/components/orders-table";
+import RecordForm from "@/components/record-form";
+import RecordsTable from "@/components/records-table";
 import DownloadButton from "@/components/download-button";
 
 interface User {
@@ -132,7 +132,7 @@ export default function DashboardPage() {
                                 d="M12 4v16m8-8H4"
                             />
                         </svg>
-                        Create Order
+                        Create Record
                     </button>
                     <button
                         onClick={() => setActiveTab("table")}
@@ -155,7 +155,7 @@ export default function DashboardPage() {
                                 d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                             />
                         </svg>
-                        View Orders
+                        View Records
                     </button>
                 </div>
 
@@ -163,13 +163,13 @@ export default function DashboardPage() {
                     <div className="space-y-6">
                         <div>
                             <h2 className="text-2xl font-bold text-foreground">
-                                Create New Order
+                                Create New Record
                             </h2>
                             <p className="text-sm text-muted-foreground mt-1">
-                                Enter order details to submit a new dispatch
+                                Enter record details to submit a new dispatch
                             </p>
                         </div>
-                        <OrderForm
+                        <RecordForm
                             onSuccess={() => setRefreshKey((k) => k + 1)}
                         />
                     </div>
@@ -180,18 +180,18 @@ export default function DashboardPage() {
                         <div className="flex justify-between items-start md:items-center flex-col md:flex-row gap-4">
                             <div>
                                 <h2 className="text-2xl font-bold text-foreground">
-                                    Your Orders
+                                    Your Records
                                 </h2>
                                 <p className="text-sm text-muted-foreground mt-1">
-                                    View and download your submitted orders
+                                    View and download your submitted records
                                 </p>
                             </div>
                             <DownloadButton
                                 downloadType="employee"
-                                label="Download Orders"
+                                label="Download Records"
                             />
                         </div>
-                        <OrdersTable key={refreshKey} />
+                        <RecordsTable key={refreshKey} />
                     </div>
                 )}
             </div>

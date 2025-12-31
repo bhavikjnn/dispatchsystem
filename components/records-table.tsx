@@ -2,15 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 
-interface Order {
+interface Record {
     _id: string;
     [key: string]: any;
 }
 
-interface AdminOrdersTableProps {
-    filters: Record<string, any>;
-    refreshKey: number;
+interface FieldVisibility {
+    [key: string]: boolean;
 }
 
 const ALL_FIELDS = [
@@ -57,31 +57,33 @@ const FIELD_LABELS: Record<string, string> = {
     paymentDetails: "Payment Details",
 };
 
-export default function AdminOrdersTable({
-    filters,
-    refreshKey,
-}: AdminOrdersTableProps) {
-    const [orders, setOrders] = useState<Order[]>([]);
+export default function RecordsTable() {
+    const [records, setRecords] = useState<Record[]>([]);
+    const [filteredRecords, setFilteredRecords] = useState<Record[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [visibility, setVisibility] = useState<FieldVisibility>({});
+    const [searchTerm, setSearchTerm] = useState("");
+    const [filterField, setFilterField] = useState("companyName");
 
     useEffect(() => {
-        const fetchOrders = async () => {
+        const fetchData = async () => {
             try {
-                setLoading(true);
-                const response = await fetch("/api/records/filter", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(filters),
-                });
+                const [recordsRes, visibilityRes] = await Promise.all([
+                    fetch("/api/records"),
+                    fetch("/api/visibility"),
+                ]);
 
-                if (!response.ok) {
-                    throw new Error("Failed to fetch filtered records");
-                }
+                if (!recordsRes.ok) throw new Error("Failed to fetch records");
+                if (!visibilityRes.ok)
+                    throw new Error("Failed to fetch visibility");
 
-                const data = await response.json();
-                setOrders(data.records || []);
-                setError("");
+                const recordsData = await recordsRes.json();
+                const visibilityData = await visibilityRes.json();
+
+                setRecords(recordsData.records || []);
+                setFilteredRecords(recordsData.records || []);
+                setVisibility(visibilityData.visibility.fields || {});
             } catch (err) {
                 setError(
                     err instanceof Error ? err.message : "An error occurred"
@@ -91,8 +93,24 @@ export default function AdminOrdersTable({
             }
         };
 
-        fetchOrders();
-    }, [filters, refreshKey]);
+        fetchData();
+    }, []);
+
+    useEffect(() => {
+        if (!searchTerm) {
+            setFilteredRecords(records);
+            return;
+        }
+
+        const filtered = records.filter((record) => {
+            const value = record[filterField];
+            if (!value) return false;
+            return String(value)
+                .toLowerCase()
+                .includes(searchTerm.toLowerCase());
+        });
+        setFilteredRecords(filtered);
+    }, [searchTerm, filterField, records]);
 
     if (loading)
         return (
@@ -124,7 +142,7 @@ export default function AdminOrdersTable({
                 </div>
             </Card>
         );
-    if (orders.length === 0)
+    if (records.length === 0)
         return (
             <Card className="p-12 bg-card border border-border">
                 <div className="text-center">
@@ -142,31 +160,59 @@ export default function AdminOrdersTable({
                         />
                     </svg>
                     <h3 className="text-lg font-semibold text-foreground mb-1">
-                        No records found
+                        No records yet
                     </h3>
                     <p className="text-muted-foreground">
-                        Try adjusting your filters or create some records first
+                        Create your first record to get started
                     </p>
                 </div>
             </Card>
         );
 
-    const columns = ALL_FIELDS;
+    const visibleColumns = ALL_FIELDS.filter(
+        (field) => visibility[field] !== false
+    );
+    const filterableFields = [
+        "companyName",
+        "city",
+        "state",
+        "country",
+        "transporterName",
+        "invoiceNo",
+    ];
 
     return (
         <Card className="border border-border bg-card overflow-hidden">
             <div className="p-6 border-b border-border bg-secondary/5">
-                <div className="flex justify-between items-start md:items-center flex-col md:flex-row gap-2">
+                <div className="flex justify-between items-start md:items-center flex-col md:flex-row gap-4">
                     <div>
                         <h3 className="text-lg font-semibold text-foreground">
-                            All Records
+                            Your Records
                         </h3>
                         <p className="text-xs text-muted-foreground mt-1">
-                            Admin view: All {columns.length} fields visible
+                            Showing {filteredRecords.length} of {records.length}{" "}
+                            records ({visibleColumns.length} fields visible)
                         </p>
                     </div>
-                    <div className="text-sm font-medium text-foreground bg-primary/10 px-3 py-1 rounded-full">
-                        {orders.length} records
+                    <div className="flex gap-2 w-full md:w-auto">
+                        <select
+                            value={filterField}
+                            onChange={(e) => setFilterField(e.target.value)}
+                            className="px-3 py-2 border border-border rounded-lg text-sm bg-input text-foreground"
+                        >
+                            {filterableFields.map((field) => (
+                                <option key={field} value={field}>
+                                    {FIELD_LABELS[field]}
+                                </option>
+                            ))}
+                        </select>
+                        <Input
+                            type="text"
+                            placeholder={`Search by ${FIELD_LABELS[filterField]}...`}
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full md:w-64"
+                        />
                     </div>
                 </div>
             </div>
@@ -174,10 +220,10 @@ export default function AdminOrdersTable({
                 <table className="w-full text-sm">
                     <thead className="border-b border-border bg-secondary/10">
                         <tr>
-                            {columns.map((col) => (
+                            {visibleColumns.map((col) => (
                                 <th
                                     key={col}
-                                    className="px-6 py-3 text-left font-semibold text-foreground text-xs uppercase whitespace-nowrap"
+                                    className="px-6 py-3 text-left font-semibold text-foreground text-xs uppercase tracking-wider whitespace-nowrap"
                                 >
                                     {FIELD_LABELS[col]}
                                 </th>
@@ -185,29 +231,29 @@ export default function AdminOrdersTable({
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
-                        {orders.map((order) => (
+                        {filteredRecords.map((record) => (
                             <tr
-                                key={order._id}
+                                key={record._id}
                                 className="hover:bg-secondary/5 transition-colors"
                             >
-                                {columns.map((col) => (
+                                {visibleColumns.map((col) => (
                                     <td
                                         key={col}
                                         className="px-6 py-4 text-foreground text-sm"
                                     >
                                         {col === "invDate"
                                             ? new Date(
-                                                  order[col]
+                                                  record[col]
                                               ).toLocaleDateString()
                                             : col === "amount"
-                                            ? `₹${Number(order[col]).toFixed(
+                                            ? `₹${Number(record[col]).toFixed(
                                                   2
                                               )}`
                                             : col === "rate"
-                                            ? `₹${Number(order[col]).toFixed(
+                                            ? `₹${Number(record[col]).toFixed(
                                                   2
                                               )}`
-                                            : String(order[col] || "-")}
+                                            : String(record[col] || "-")}
                                     </td>
                                 ))}
                             </tr>
