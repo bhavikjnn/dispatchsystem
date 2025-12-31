@@ -63,8 +63,20 @@ export default function RecordsTable() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [visibility, setVisibility] = useState<FieldVisibility>({});
-    const [searchTerm, setSearchTerm] = useState("");
-    const [filterField, setFilterField] = useState("companyName");
+
+    // Enhanced filters
+    const [filters, setFilters] = useState({
+        company: "",
+        city: "",
+        state: "",
+        country: "",
+        transporter: "",
+        bookingType: "",
+        paidOrToPay: "",
+        startDate: "",
+        endDate: "",
+    });
+    const [showFilters, setShowFilters] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -97,20 +109,86 @@ export default function RecordsTable() {
     }, []);
 
     useEffect(() => {
-        if (!searchTerm) {
-            setFilteredRecords(records);
-            return;
+        // Apply filters
+        let filtered = [...records];
+
+        if (filters.company) {
+            filtered = filtered.filter((r) =>
+                r.companyName
+                    ?.toLowerCase()
+                    .includes(filters.company.toLowerCase())
+            );
+        }
+        if (filters.city) {
+            filtered = filtered.filter((r) =>
+                r.city?.toLowerCase().includes(filters.city.toLowerCase())
+            );
+        }
+        if (filters.state) {
+            filtered = filtered.filter((r) =>
+                r.state?.toLowerCase().includes(filters.state.toLowerCase())
+            );
+        }
+        if (filters.country) {
+            filtered = filtered.filter((r) =>
+                r.country?.toLowerCase().includes(filters.country.toLowerCase())
+            );
+        }
+        if (filters.transporter) {
+            filtered = filtered.filter((r) =>
+                r.transporterName
+                    ?.toLowerCase()
+                    .includes(filters.transporter.toLowerCase())
+            );
+        }
+        if (filters.bookingType) {
+            filtered = filtered.filter(
+                (r) => r.bookingType === filters.bookingType
+            );
+        }
+        if (filters.paidOrToPay) {
+            filtered = filtered.filter(
+                (r) => r.paidOrToPay === filters.paidOrToPay
+            );
+        }
+        if (filters.startDate) {
+            filtered = filtered.filter(
+                (r) => new Date(r.invDate) >= new Date(filters.startDate)
+            );
+        }
+        if (filters.endDate) {
+            filtered = filtered.filter(
+                (r) => new Date(r.invDate) <= new Date(filters.endDate)
+            );
         }
 
-        const filtered = records.filter((record) => {
-            const value = record[filterField];
-            if (!value) return false;
-            return String(value)
-                .toLowerCase()
-                .includes(searchTerm.toLowerCase());
-        });
         setFilteredRecords(filtered);
-    }, [searchTerm, filterField, records]);
+    }, [filters, records]);
+
+    const handleFilterChange = (
+        e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    ) => {
+        const { name, value } = e.target;
+        setFilters((prev) => ({ ...prev, [name]: value }));
+    };
+
+    const handleResetFilters = () => {
+        setFilters({
+            company: "",
+            city: "",
+            state: "",
+            country: "",
+            transporter: "",
+            bookingType: "",
+            paidOrToPay: "",
+            startDate: "",
+            endDate: "",
+        });
+    };
+
+    const activeFilterCount = Object.values(filters).filter(
+        (v) => v !== ""
+    ).length;
 
     if (loading)
         return (
@@ -182,85 +260,216 @@ export default function RecordsTable() {
     ];
 
     return (
-        <Card className="border border-border bg-card overflow-hidden">
-            <div className="p-6 border-b border-border bg-secondary/5">
-                <div className="flex justify-between items-start md:items-center flex-col md:flex-row gap-4">
+        <>
+            {/* Filter Panel */}
+            <Card className="p-6 bg-card border border-border mb-6">
+                <div className="flex justify-between items-center mb-4">
                     <div>
-                        <h3 className="text-lg font-semibold text-foreground">
-                            Your Records
+                        <h3 className="text-sm font-semibold text-foreground">
+                            Filters
+                            {activeFilterCount > 0 && (
+                                <span className="ml-2 text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
+                                    {activeFilterCount} active
+                                </span>
+                            )}
                         </h3>
-                        <p className="text-xs text-muted-foreground mt-1">
-                            Showing {filteredRecords.length} of {records.length}{" "}
-                            records ({visibleColumns.length} fields visible)
-                        </p>
                     </div>
-                    <div className="flex gap-2 w-full md:w-auto">
-                        <select
-                            value={filterField}
-                            onChange={(e) => setFilterField(e.target.value)}
-                            className="px-3 py-2 border border-border rounded-lg text-sm bg-input text-foreground"
+                    <button
+                        onClick={() => setShowFilters(!showFilters)}
+                        className="text-sm text-primary hover:text-primary/80 flex items-center gap-1"
+                    >
+                        {showFilters ? "Hide" : "Show"} Filters
+                        <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
                         >
-                            {filterableFields.map((field) => (
-                                <option key={field} value={field}>
-                                    {FIELD_LABELS[field]}
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d={
+                                    showFilters
+                                        ? "M5 15l7-7 7 7"
+                                        : "M19 9l-7 7-7-7"
+                                }
+                            />
+                        </svg>
+                    </button>
+                </div>
+
+                {showFilters && (
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <Input
+                                type="text"
+                                name="company"
+                                placeholder="Company name..."
+                                value={filters.company}
+                                onChange={handleFilterChange}
+                                className="w-full"
+                            />
+                            <Input
+                                type="text"
+                                name="city"
+                                placeholder="City..."
+                                value={filters.city}
+                                onChange={handleFilterChange}
+                                className="w-full"
+                            />
+                            <Input
+                                type="text"
+                                name="state"
+                                placeholder="State..."
+                                value={filters.state}
+                                onChange={handleFilterChange}
+                                className="w-full"
+                            />
+                            <Input
+                                type="text"
+                                name="country"
+                                placeholder="Country..."
+                                value={filters.country}
+                                onChange={handleFilterChange}
+                                className="w-full"
+                            />
+                            <Input
+                                type="text"
+                                name="transporter"
+                                placeholder="Transporter..."
+                                value={filters.transporter}
+                                onChange={handleFilterChange}
+                                className="w-full"
+                            />
+                            <select
+                                name="bookingType"
+                                value={filters.bookingType}
+                                onChange={handleFilterChange}
+                                className="px-3 py-2 border border-border rounded-lg text-sm bg-input text-foreground"
+                            >
+                                <option value="">All Booking Types</option>
+                                <option value="Standard">Standard</option>
+                                <option value="Express">Express</option>
+                                <option value="Priority">Priority</option>
+                                <option value="Door Delivery">
+                                    Door Delivery
                                 </option>
-                            ))}
-                        </select>
-                        <Input
-                            type="text"
-                            placeholder={`Search by ${FIELD_LABELS[filterField]}...`}
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full md:w-64"
-                        />
+                            </select>
+                            <select
+                                name="paidOrToPay"
+                                value={filters.paidOrToPay}
+                                onChange={handleFilterChange}
+                                className="px-3 py-2 border border-border rounded-lg text-sm bg-input text-foreground"
+                            >
+                                <option value="">All Payment Status</option>
+                                <option value="Paid">Paid</option>
+                                <option value="To Pay">To Pay</option>
+                            </select>
+                            <Input
+                                type="date"
+                                name="startDate"
+                                value={filters.startDate}
+                                onChange={handleFilterChange}
+                                placeholder="Start date"
+                                className="w-full"
+                            />
+                            <Input
+                                type="date"
+                                name="endDate"
+                                value={filters.endDate}
+                                onChange={handleFilterChange}
+                                placeholder="End date"
+                                className="w-full"
+                            />
+                        </div>
+                        {activeFilterCount > 0 && (
+                            <button
+                                onClick={handleResetFilters}
+                                className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
+                            >
+                                <svg
+                                    className="w-4 h-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M6 18L18 6M6 6l12 12"
+                                    />
+                                </svg>
+                                Clear all filters
+                            </button>
+                        )}
+                    </div>
+                )}
+            </Card>
+
+            {/* Records Table */}
+            <Card className="border border-border bg-card overflow-hidden">
+                <div className="p-6 border-b border-border bg-secondary/5">
+                    <div className="flex justify-between items-start md:items-center flex-col md:flex-row gap-4">
+                        <div>
+                            <h3 className="text-lg font-semibold text-foreground">
+                                Your Records
+                            </h3>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                Showing {filteredRecords.length} of{" "}
+                                {records.length} records (
+                                {visibleColumns.length} fields visible)
+                            </p>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                    <thead className="border-b border-border bg-secondary/10">
-                        <tr>
-                            {visibleColumns.map((col) => (
-                                <th
-                                    key={col}
-                                    className="px-6 py-3 text-left font-semibold text-foreground text-xs uppercase tracking-wider whitespace-nowrap"
-                                >
-                                    {FIELD_LABELS[col]}
-                                </th>
-                            ))}
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                        {filteredRecords.map((record) => (
-                            <tr
-                                key={record._id}
-                                className="hover:bg-secondary/5 transition-colors"
-                            >
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                        <thead className="border-b border-border bg-secondary/10">
+                            <tr>
                                 {visibleColumns.map((col) => (
-                                    <td
+                                    <th
                                         key={col}
-                                        className="px-6 py-4 text-foreground text-sm"
+                                        className="px-6 py-3 text-left font-semibold text-foreground text-xs uppercase tracking-wider whitespace-nowrap"
                                     >
-                                        {col === "invDate"
-                                            ? new Date(
-                                                  record[col]
-                                              ).toLocaleDateString()
-                                            : col === "amount"
-                                            ? `₹${Number(record[col]).toFixed(
-                                                  2
-                                              )}`
-                                            : col === "rate"
-                                            ? `₹${Number(record[col]).toFixed(
-                                                  2
-                                              )}`
-                                            : String(record[col] || "-")}
-                                    </td>
+                                        {FIELD_LABELS[col]}
+                                    </th>
                                 ))}
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        </Card>
+                        </thead>
+                        <tbody className="divide-y divide-border">
+                            {filteredRecords.map((record) => (
+                                <tr
+                                    key={record._id}
+                                    className="hover:bg-secondary/5 transition-colors"
+                                >
+                                    {visibleColumns.map((col) => (
+                                        <td
+                                            key={col}
+                                            className="px-6 py-4 text-foreground text-sm"
+                                        >
+                                            {col === "invDate"
+                                                ? new Date(
+                                                      record[col]
+                                                  ).toLocaleDateString()
+                                                : col === "amount"
+                                                ? `₹${Number(
+                                                      record[col]
+                                                  ).toFixed(2)}`
+                                                : col === "rate"
+                                                ? `₹${Number(
+                                                      record[col]
+                                                  ).toFixed(2)}`
+                                                : String(record[col] || "-")}
+                                        </td>
+                                    ))}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </Card>
+        </>
     );
 }

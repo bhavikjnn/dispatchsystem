@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
+import { ITEM_DESCRIPTIONS } from "@/lib/item-descriptions";
 
 const BOOKING_TYPES = ["Standard", "Express", "Priority", "Door Delivery"];
 const PAYMENT_TYPES = ["Paid", "To Pay"];
@@ -462,14 +462,20 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
                     <label className="block text-sm font-medium text-foreground mb-2">
                         Item Description *
                     </label>
-                    <Textarea
+                    <select
                         name="itemDescription"
                         value={formData.itemDescription}
                         onChange={handleChange}
                         required
-                        className="w-full bg-input border border-border text-foreground input-focus rounded-lg px-4 py-3 min-h-24"
-                        placeholder="e.g., Spare parts, Electronic components, Textile materials..."
-                    />
+                        className="w-full px-4 py-2 border border-border rounded-lg text-sm bg-input text-foreground input-focus"
+                    >
+                        <option value="">Select item...</option>
+                        {ITEM_DESCRIPTIONS.map((item) => (
+                            <option key={item} value={item}>
+                                {item}
+                            </option>
+                        ))}
+                    </select>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
