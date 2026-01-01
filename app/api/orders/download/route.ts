@@ -39,6 +39,115 @@ function convertToCSV(data: any[], visibleFields: string[]): string {
     );
 }
 
+function convertToPDFHTML(data: any[], visibleFields: string[]): string {
+    if (data.length === 0) {
+        return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1 { color: #111; text-align: center; }
+        p { text-align: center; color: #666; }
+    </style>
+</head>
+<body>
+    <h1>Dispatch Records</h1>
+    <p>No records found</p>
+</body>
+</html>`;
+    }
+
+    const headers = visibleFields.map((field) =>
+        field
+            .replace(/([A-Z])/g, " $1")
+            .replace(/^./, (str) => str.toUpperCase())
+    );
+
+    const rows = data
+        .map((item) => {
+            return `<tr>${visibleFields
+                .map((field) => {
+                    const value = item[field];
+                    if (value === null || value === undefined)
+                        return "<td></td>";
+                    if (value instanceof Date)
+                        return `<td>${value.toLocaleDateString()}</td>`;
+                    return `<td>${String(value)
+                        .replace(/</g, "&lt;")
+                        .replace(/>/g, "&gt;")}</td>`;
+                })
+                .join("")}</tr>`;
+        })
+        .join("");
+
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page { size: A4 landscape; margin: 10mm; }
+        body { 
+            font-family: Arial, sans-serif; 
+            font-size: 9px;
+            margin: 0;
+            padding: 10px;
+        }
+        h1 { 
+            color: #111; 
+            text-align: center; 
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+        .meta {
+            text-align: center;
+            color: #666;
+            font-size: 10px;
+            margin-bottom: 15px;
+        }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            font-size: 8px;
+        }
+        th, td { 
+            border: 1px solid #ddd; 
+            padding: 4px 6px; 
+            text-align: left;
+            word-wrap: break-word;
+        }
+        th { 
+            background-color: #111; 
+            color: white; 
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+        }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        tr:hover { background-color: #f5f5f5; }
+    </style>
+</head>
+<body>
+    <h1>Dispatch Records</h1>
+    <div class="meta">
+        Generated on ${new Date().toLocaleString()} | Total Records: ${
+        data.length
+    }
+    </div>
+    <table>
+        <thead>
+            <tr>${headers.map((h) => `<th>${h}</th>`).join("")}</tr>
+        </thead>
+        <tbody>
+            ${rows}
+        </tbody>
+    </table>
+</body>
+</html>`;
+}
+
 export async function POST(request: NextRequest) {
     try {
         const user = await getCurrentUser();
@@ -49,7 +158,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const { filters, downloadType } = await request.json();
+        const { filters, downloadType, format = "csv" } = await request.json();
 
         const client = await clientPromise;
         const db = client.db("order-dispatch");
@@ -120,9 +229,24 @@ export async function POST(request: NextRequest) {
             filters: filters || {},
             downloadedAt: new Date(),
             recordCount: filteredRecords.length,
+            format: format,
         });
 
-        // Convert to CSV
+        if (format === "pdf") {
+            // Generate PDF HTML
+            const html = convertToPDFHTML(filteredRecords, visibleFieldNames);
+
+            return new NextResponse(html, {
+                headers: {
+                    "Content-Type": "text/html; charset=utf-8",
+                    "Content-Disposition": `inline; filename="records-${
+                        new Date().toISOString().split("T")[0]
+                    }.html"`,
+                },
+            });
+        }
+
+        // Convert to CSV (default)
         const csv = convertToCSV(filteredRecords, visibleFieldNames);
 
         return new NextResponse(csv, {

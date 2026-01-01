@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import RecordForm from "@/components/record-form";
 import RecordsTable from "@/components/records-table";
 import DownloadButton from "@/components/download-button";
+import BulkUpload from "@/components/bulk-upload";
 
 interface User {
     id: string;
@@ -172,6 +173,12 @@ export default function DashboardPage() {
                         <RecordForm
                             onSuccess={() => setRefreshKey((k) => k + 1)}
                         />
+
+                        <div className="pt-6 border-t border-border">
+                            <BulkUpload
+                                onSuccess={() => setRefreshKey((k) => k + 1)}
+                            />
+                        </div>
                     </div>
                 )}
 

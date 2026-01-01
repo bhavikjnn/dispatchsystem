@@ -5,7 +5,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
 
 interface AuthFormProps {
     isLogin?: boolean;
@@ -30,10 +29,32 @@ export default function AuthForm({ isLogin = true, onSuccess }: AuthFormProps) {
         setFormData((prev) => ({ ...prev, [name]: value }));
     };
 
+    const validateEmail = (email: string) => {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setError("");
+
+        if (!formData.email || !formData.password) {
+            setError("Please enter both email and password.");
+            setLoading(false);
+            return;
+        }
+
+        if (!validateEmail(formData.email)) {
+            setError("Please enter a valid email address.");
+            setLoading(false);
+            return;
+        }
+
+        if (!isLogin && !formData.name) {
+            setError("Please enter your full name.");
+            setLoading(false);
+            return;
+        }
 
         try {
             const endpoint = isLogin ? "/api/auth/login" : "/api/auth/register";
@@ -68,141 +89,151 @@ export default function AuthForm({ isLogin = true, onSuccess }: AuthFormProps) {
     };
 
     return (
-        <Card className="p-8 bg-card border border-border">
-            <div className="mb-8">
-                <h1 className="text-2xl font-bold text-foreground mb-2">
-                    {isLogin ? "Welcome Back" : "Create Account"}
-                </h1>
-                <p className="text-sm text-muted-foreground">
-                    {isLogin
-                        ? "Sign in to access your dispatch orders"
-                        : "Set up your account to get started"}
-                </p>
+        <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] relative overflow-hidden w-full">
+            {/* Animated background elements */}
+            <div className="absolute inset-0 overflow-hidden">
+                <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/20 rounded-full blur-3xl animate-pulse"></div>
+                <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-primary/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
             </div>
 
-            {error && (
-                <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg flex items-start gap-3">
+            {/* Centered glass card */}
+            <div className="relative z-10 w-full max-w-md rounded-3xl bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl shadow-2xl p-8 border border-white/10">
+                {/* Logo */}
+                <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/20 backdrop-blur-sm mb-6 mx-auto shadow-lg">
                     <svg
-                        className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5"
+                        className="w-10 h-10 text-primary"
                         fill="currentColor"
-                        viewBox="0 0 20 20"
+                        viewBox="0 0 24 24"
                     >
-                        <path
-                            fillRule="evenodd"
-                            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                            clipRule="evenodd"
-                        />
+                        <path d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
-                    <span className="text-sm text-destructive">{error}</span>
-                </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                        Email Address
-                    </label>
-                    <Input
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleChange}
-                        required
-                        className="w-full bg-input border border-border text-foreground input-focus rounded-lg px-4 py-2"
-                        placeholder="you@company.com"
-                    />
                 </div>
 
-                <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                        Password
-                    </label>
-                    <Input
-                        type="password"
-                        name="password"
-                        value={formData.password}
-                        onChange={handleChange}
-                        required
-                        className="w-full bg-input border border-border text-foreground input-focus rounded-lg px-4 py-2"
-                        placeholder="••••••••"
-                    />
-                </div>
+                {/* Title */}
+                <h2 className="text-3xl font-bold text-white mb-2 text-center">
+                    {isLogin ? "Welcome Back" : "Create Account"}
+                </h2>
+                <p className="text-gray-400 text-sm mb-8 text-center">
+                    {isLogin
+                        ? "Sign in to access your dispatch records"
+                        : "Join the dispatch management system"}
+                </p>
 
-                {!isLogin && (
-                    <>
-                        <div>
-                            <label className="block text-sm font-medium text-foreground mb-2">
-                                Full Name
-                            </label>
-                            <Input
+                {/* Error Message */}
+                {error && (
+                    <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl backdrop-blur-sm">
+                        <p className="text-sm text-red-400">{error}</p>
+                    </div>
+                )}
+
+                {/* Form */}
+                <form
+                    onSubmit={handleSubmit}
+                    className="flex flex-col w-full gap-4"
+                >
+                    <div className="w-full flex flex-col gap-3">
+                        {!isLogin && (
+                            <input
+                                placeholder="Full Name"
                                 type="text"
                                 name="name"
                                 value={formData.name}
+                                className="w-full px-5 py-3 rounded-xl bg-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 border border-white/10 transition"
                                 onChange={handleChange}
                                 required
-                                className="w-full bg-input border border-border text-foreground input-focus rounded-lg px-4 py-2"
-                                placeholder="John Doe"
                             />
-                        </div>
+                        )}
 
-                        <div>
-                            <label className="block text-sm font-medium text-foreground mb-2">
-                                Role
-                            </label>
+                        <input
+                            placeholder="Email"
+                            type="email"
+                            name="email"
+                            value={formData.email}
+                            className="w-full px-5 py-3 rounded-xl bg-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 border border-white/10 transition"
+                            onChange={handleChange}
+                            required
+                        />
+
+                        <input
+                            placeholder="Password"
+                            type="password"
+                            name="password"
+                            value={formData.password}
+                            className="w-full px-5 py-3 rounded-xl bg-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 border border-white/10 transition"
+                            onChange={handleChange}
+                            required
+                        />
+
+                        {!isLogin && (
                             <select
                                 name="role"
                                 value={formData.role}
                                 onChange={handleChange}
-                                className="w-full px-4 py-2 border border-border rounded-lg text-sm bg-input text-foreground input-focus"
+                                className="w-full px-5 py-3 rounded-xl bg-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 border border-white/10 transition"
                             >
-                                <option value="employee">Employee</option>
-                                <option value="admin">Administrator</option>
+                                <option
+                                    value="employee"
+                                    className="bg-[#1e293b] text-white"
+                                >
+                                    Employee
+                                </option>
+                                <option
+                                    value="admin"
+                                    className="bg-[#1e293b] text-white"
+                                >
+                                    Administrator
+                                </option>
                             </select>
-                        </div>
-                    </>
-                )}
+                        )}
+                    </div>
 
-                <Button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full button-primary py-2 rounded-lg font-medium mt-6"
-                >
-                    {loading ? (
-                        <span className="flex items-center justify-center gap-2">
-                            <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></div>
-                            Processing...
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-5 py-3 rounded-full shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+                    >
+                        {loading ? (
+                            <span className="flex items-center justify-center gap-2">
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                Processing...
+                            </span>
+                        ) : isLogin ? (
+                            "Sign In"
+                        ) : (
+                            "Create Account"
+                        )}
+                    </button>
+
+                    <div className="w-full text-center mt-4">
+                        <span className="text-sm text-gray-400">
+                            {isLogin
+                                ? "Don't have an account? "
+                                : "Already have an account? "}
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    router.push(
+                                        isLogin ? "/register" : "/login"
+                                    )
+                                }
+                                className="underline text-white/90 hover:text-white font-medium transition"
+                            >
+                                {isLogin ? "Sign up, it's free!" : "Sign in"}
+                            </button>
                         </span>
-                    ) : isLogin ? (
-                        "Sign In"
-                    ) : (
-                        "Create Account"
-                    )}
-                </Button>
-            </form>
+                    </div>
+                </form>
+            </div>
 
-            <p className="text-center text-sm text-muted-foreground mt-6">
-                {isLogin ? (
-                    <>
-                        Don't have an account?{" "}
-                        <button
-                            onClick={() => router.push("/register")}
-                            className="text-primary hover:text-primary/80 font-semibold transition-colors"
-                        >
-                            Sign up
-                        </button>
-                    </>
-                ) : (
-                    <>
-                        Already have an account?{" "}
-                        <button
-                            onClick={() => router.push("/login")}
-                            className="text-primary hover:text-primary/80 font-semibold transition-colors"
-                        >
-                            Sign in
-                        </button>
-                    </>
-                )}
-            </p>
-        </Card>
+            {/* Bottom text */}
+            <div className="relative z-10 mt-8 text-center">
+                <p className="text-gray-400 text-sm">
+                    Secure dispatch management for{" "}
+                    <span className="font-semibold text-white">
+                        modern businesses
+                    </span>
+                </p>
+            </div>
+        </div>
     );
 }
