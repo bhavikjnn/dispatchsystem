@@ -4,7 +4,10 @@ import clientPromise from "@/lib/mongodb";
 import { getOrCreateFieldVisibility } from "@/lib/db-utils";
 
 function convertToCSV(data: any[], visibleFields: string[]): string {
-    if (data.length === 0) return "";
+    if (data.length === 0 || visibleFields.length === 0) {
+        // Return headers only if no data
+        return visibleFields.length > 0 ? visibleFields.join(",") : "No data";
+    }
 
     const headers = visibleFields;
     const rows = data.map((item) =>
@@ -165,16 +168,48 @@ export async function POST(request: NextRequest) {
 
         // Fetch user details from database to get the name
         const { ObjectId } = require("mongodb");
-        const userDoc = await db
-            .collection("users")
-            .findOne({ _id: ObjectId.createFromHexString(user.userId) });
-        const userName = userDoc?.name || "Unknown";
+        let userName = "Unknown";
+        try {
+            const userDoc = await db
+                .collection("users")
+                .findOne({ _id: ObjectId.createFromHexString(user.userId) });
+            userName = userDoc?.name || "Unknown";
+        } catch (e) {
+            console.log("Could not fetch user name:", e);
+        }
 
         const visibility = await getOrCreateFieldVisibility();
 
-        const visibleFieldNames = Object.entries(visibility.fields)
+        // Get all visible field names, or use default if none configured
+        let visibleFieldNames = Object.entries(visibility.fields)
             .filter(([_, visible]) => visible)
             .map(([field]) => field);
+
+        // If no visible fields, use all default fields
+        if (visibleFieldNames.length === 0) {
+            visibleFieldNames = [
+                "companyName",
+                "contactPerson",
+                "contactNo",
+                "email",
+                "recordRef",
+                "city",
+                "district",
+                "state",
+                "country",
+                "invoiceNo",
+                "invDate",
+                "itemCategory",
+                "itemSubcategory",
+                "rate",
+                "qty",
+                "amount",
+                "transporterName",
+                "paidOrToPay",
+                "bookingType",
+                "paymentDetails",
+            ];
+        }
 
         const query: any = {};
 
@@ -185,19 +220,57 @@ export async function POST(request: NextRequest) {
         if (filters && Object.keys(filters).length > 0) {
             if (filters.company)
                 query.companyName = { $regex: filters.company, $options: "i" };
+            if (filters.contactPerson)
+                query.contactPerson = {
+                    $regex: filters.contactPerson,
+                    $options: "i",
+                };
+            if (filters.contactNo)
+                query.contactNo = { $regex: filters.contactNo, $options: "i" };
+            if (filters.email)
+                query.email = { $regex: filters.email, $options: "i" };
+            if (filters.recordRef)
+                query.recordRef = { $regex: filters.recordRef, $options: "i" };
             if (filters.city)
                 query.city = { $regex: filters.city, $options: "i" };
+            if (filters.district)
+                query.district = { $regex: filters.district, $options: "i" };
             if (filters.state)
                 query.state = { $regex: filters.state, $options: "i" };
             if (filters.country)
                 query.country = { $regex: filters.country, $options: "i" };
+            if (filters.invoiceNo)
+                query.invoiceNo = { $regex: filters.invoiceNo, $options: "i" };
+            if (filters.itemCategory)
+                query.itemCategory = {
+                    $regex: filters.itemCategory,
+                    $options: "i",
+                };
+            if (filters.itemSubcategory)
+                query.itemSubcategory = {
+                    $regex: filters.itemSubcategory,
+                    $options: "i",
+                };
             if (filters.transporter)
                 query.transporterName = {
                     $regex: filters.transporter,
                     $options: "i",
                 };
-            if (filters.bookingType) query.bookingType = filters.bookingType;
-            if (filters.paidOrToPay) query.paidOrToPay = filters.paidOrToPay;
+            if (filters.bookingType)
+                query.bookingType = {
+                    $regex: filters.bookingType,
+                    $options: "i",
+                };
+            if (filters.paidOrToPay)
+                query.paidOrToPay = {
+                    $regex: filters.paidOrToPay,
+                    $options: "i",
+                };
+            if (filters.paymentDetails)
+                query.paymentDetails = {
+                    $regex: filters.paymentDetails,
+                    $options: "i",
+                };
 
             if (filters.startDate || filters.endDate) {
                 query.invDate = {};
@@ -220,17 +293,21 @@ export async function POST(request: NextRequest) {
         });
 
         // Log the download
-        await db.collection("audit-logs").insertOne({
-            employeeId: user.userId,
-            employeeEmail: user.email,
-            employeeName: userName,
-            downloadType:
-                Object.keys(filters || {}).length > 0 ? "filtered" : "full",
-            filters: filters || {},
-            downloadedAt: new Date(),
-            recordCount: filteredRecords.length,
-            format: format,
-        });
+        try {
+            await db.collection("audit-logs").insertOne({
+                employeeId: user.userId,
+                employeeEmail: user.email,
+                employeeName: userName,
+                downloadType:
+                    Object.keys(filters || {}).length > 0 ? "filtered" : "full",
+                filters: filters || {},
+                downloadedAt: new Date(),
+                recordCount: filteredRecords.length,
+                format: format,
+            });
+        } catch (e) {
+            console.log("Could not log download:", e);
+        }
 
         if (format === "pdf") {
             // Generate PDF HTML

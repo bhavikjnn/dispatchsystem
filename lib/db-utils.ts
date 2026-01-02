@@ -17,7 +17,8 @@ export interface Record {
     country: string;
     invoiceNo: string;
     invDate: Date;
-    itemDescription: string;
+    itemCategory: string;
+    itemSubcategory: string;
     rate: number;
     qty: number;
     amount: number;
@@ -44,7 +45,8 @@ export interface FieldVisibility {
         country: boolean;
         invoiceNo: boolean;
         invDate: boolean;
-        itemDescription: boolean;
+        itemCategory: boolean;
+        itemSubcategory: boolean;
         rate: boolean;
         qty: boolean;
         amount: boolean;
@@ -107,7 +109,8 @@ export async function getOrCreateFieldVisibility(): Promise<FieldVisibility> {
                 country: true,
                 invoiceNo: true,
                 invDate: true,
-                itemDescription: true,
+                itemCategory: true,
+                itemSubcategory: true,
                 rate: true,
                 qty: true,
                 amount: true,

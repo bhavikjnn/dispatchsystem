@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import RecordForm from "@/components/record-form";
 import RecordsTable from "@/components/records-table";
-import DownloadButton from "@/components/download-button";
 import BulkUpload from "@/components/bulk-upload";
 
 interface User {
@@ -193,10 +192,6 @@ export default function DashboardPage() {
                                     View and download your submitted records
                                 </p>
                             </div>
-                            <DownloadButton
-                                downloadType="employee"
-                                label="Download Records"
-                            />
                         </div>
                         <RecordsTable key={refreshKey} />
                     </div>

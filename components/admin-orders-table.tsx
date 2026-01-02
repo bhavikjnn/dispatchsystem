@@ -2,6 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+    ChevronLeft,
+    ChevronRight,
+    ChevronsLeft,
+    ChevronsRight,
+} from "lucide-react";
 
 interface Order {
     _id: string;
@@ -13,19 +20,27 @@ interface AdminOrdersTableProps {
     refreshKey: number;
 }
 
+interface Pagination {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+}
+
 const ALL_FIELDS = [
     "companyName",
+    "itemCategory",
+    "itemSubcategory",
+    "city",
+    "state",
+    "district",
+    "country",
     "contactPerson",
     "contactNo",
     "email",
     "recordRef",
-    "city",
-    "district",
-    "state",
-    "country",
     "invoiceNo",
     "invDate",
-    "itemDescription",
     "rate",
     "qty",
     "amount",
@@ -47,7 +62,8 @@ const FIELD_LABELS: Record<string, string> = {
     country: "Country",
     invoiceNo: "Invoice Number",
     invDate: "Invoice Date",
-    itemDescription: "Item Description",
+    itemCategory: "Item Category",
+    itemSubcategory: "Item Subcategory",
     rate: "Rate",
     qty: "Quantity",
     amount: "Amount",
@@ -64,35 +80,58 @@ export default function AdminOrdersTable({
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [pagination, setPagination] = useState<Pagination>({
+        page: 1,
+        limit: 20,
+        total: 0,
+        totalPages: 0,
+    });
+
+    const fetchOrders = async (page: number) => {
+        try {
+            setLoading(true);
+            const response = await fetch("/api/records/filter", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    ...filters,
+                    page,
+                    limit: pagination.limit,
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to fetch filtered records");
+            }
+
+            const data = await response.json();
+            setOrders(data.records || []);
+            setPagination(
+                data.pagination || {
+                    page: 1,
+                    limit: 20,
+                    total: 0,
+                    totalPages: 0,
+                }
+            );
+            setError("");
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "An error occurred");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchOrders = async () => {
-            try {
-                setLoading(true);
-                const response = await fetch("/api/records/filter", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(filters),
-                });
-
-                if (!response.ok) {
-                    throw new Error("Failed to fetch filtered records");
-                }
-
-                const data = await response.json();
-                setOrders(data.records || []);
-                setError("");
-            } catch (err) {
-                setError(
-                    err instanceof Error ? err.message : "An error occurred"
-                );
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchOrders();
+        // Reset to page 1 when filters change
+        fetchOrders(1);
     }, [filters, refreshKey]);
+
+    const handlePageChange = (newPage: number) => {
+        if (newPage >= 1 && newPage <= pagination.totalPages) {
+            fetchOrders(newPage);
+        }
+    };
 
     if (loading)
         return (
@@ -124,7 +163,7 @@ export default function AdminOrdersTable({
                 </div>
             </Card>
         );
-    if (orders.length === 0)
+    if (pagination.total === 0)
         return (
             <Card className="p-12 bg-card border border-border">
                 <div className="text-center">
@@ -166,7 +205,7 @@ export default function AdminOrdersTable({
                         </p>
                     </div>
                     <div className="text-sm font-medium text-foreground bg-primary/10 px-3 py-1 rounded-full">
-                        {orders.length} records
+                        {pagination.total} total records
                     </div>
                 </div>
             </div>
@@ -215,6 +254,59 @@ export default function AdminOrdersTable({
                     </tbody>
                 </table>
             </div>
+
+            {/* Pagination Controls */}
+            {pagination.totalPages > 1 && (
+                <div className="p-4 border-t border-border flex items-center justify-between">
+                    <div className="text-sm text-muted-foreground">
+                        Page {pagination.page} of {pagination.totalPages} (
+                        {pagination.total} total records)
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePageChange(1)}
+                            disabled={pagination.page === 1}
+                        >
+                            <ChevronsLeft className="h-4 w-4" />
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                                handlePageChange(pagination.page - 1)
+                            }
+                            disabled={pagination.page === 1}
+                        >
+                            <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <span className="px-3 py-1 text-sm font-medium">
+                            {pagination.page}
+                        </span>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                                handlePageChange(pagination.page + 1)
+                            }
+                            disabled={pagination.page === pagination.totalPages}
+                        >
+                            <ChevronRight className="h-4 w-4" />
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                                handlePageChange(pagination.totalPages)
+                            }
+                            disabled={pagination.page === pagination.totalPages}
+                        >
+                            <ChevronsRight className="h-4 w-4" />
+                        </Button>
+                    </div>
+                </div>
+            )}
         </Card>
     );
 }

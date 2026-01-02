@@ -1,6 +1,6 @@
 import { hash, compare } from "bcryptjs";
 import { cookies } from "next/headers";
-import { SignJWT, jwtVerify } from "jose";
+import { jwtVerify, CompactSign } from "jose";
 
 const JWT_SECRET = new TextEncoder().encode(
     process.env.JWT_SECRET || "your-secret-key-change-in-production"
@@ -31,9 +31,18 @@ export async function createToken(
     email: string,
     role: string
 ): Promise<string> {
-    const jwt = await new SignJWT({ userId, email, role })
-        .setProtectedHeader({ alg: "HS256" })
-        .setExpirationTime("7d")
+    // Token expires in 30 minutes
+    const payload = new TextEncoder().encode(
+        JSON.stringify({
+            userId,
+            email,
+            role,
+            exp: Math.floor(Date.now() / 1000) + 60 * 30,
+        })
+    );
+    const protectedHeader = { alg: "HS256", typ: "JWT" };
+    const jwt = await new CompactSign(payload)
+        .setProtectedHeader(protectedHeader)
         .sign(JWT_SECRET);
     return jwt;
 }
@@ -51,18 +60,27 @@ export async function getCurrentUser() {
     const cookieStore = await cookies();
     const token = cookieStore.get("auth_token")?.value;
     if (!token) return null;
-
     const payload = await verifyToken(token);
     if (!payload) return null;
-
+    // Normalize payload (handle jose returning payload as Uint8Array or object)
+    let user: any = payload;
+    if (typeof payload === "object" && !("userId" in payload)) {
+        // jose may return { payload: { ... } }
+        user = (payload as any).payload || payload;
+    }
+    // If still not normalized, try to parse if it's a string
+    if (user && typeof user === "string") {
+        try {
+            user = JSON.parse(user);
+        } catch {}
+    }
     // Return only the expected fields
-    if (payload && payload.userId && payload.email && payload.role) {
+    if (user && user.userId && user.email && user.role) {
         return {
-            userId: payload.userId as string,
-            email: payload.email as string,
-            role: payload.role as string,
+            userId: user.userId,
+            email: user.email,
+            role: user.role,
         };
     }
-
     return null;
 }

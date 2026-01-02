@@ -5,60 +5,51 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { Combobox } from "@/components/ui/combobox";
 
 interface FilterPanelProps {
     onFilter: (filters: Record<string, any>) => void;
-}
-
-interface FilterOptions {
-    companies: string[];
-    cities: string[];
-    states: string[];
-    countries: string[];
-    transporters: string[];
-    bookingTypes: string[];
 }
 
 export default function AdminFilterPanel({ onFilter }: FilterPanelProps) {
     const [filters, setFilters] = useState({
         company: "",
         city: "",
+        district: "",
         state: "",
         country: "",
+        invoiceNo: "",
+        itemCategory: "",
+        itemSubcategory: "",
         transporter: "",
-        bookingType: "",
-        paidOrToPay: "",
         startDate: "",
         endDate: "",
     });
 
-    const [options, setOptions] = useState<FilterOptions>({
-        companies: [],
-        cities: [],
-        states: [],
-        countries: [],
-        transporters: [],
-        bookingTypes: [],
-    });
-
-    const [loadingOptions, setLoadingOptions] = useState(true);
+    const [companies, setCompanies] = useState<string[]>([]);
+    const [countries, setCountries] = useState<string[]>([]);
+    const [states, setStates] = useState<string[]>([]);
+    const [cities, setCities] = useState<string[]>([]);
+    const [districts, setDistricts] = useState<string[]>([]);
+    const [itemCategories, setItemCategories] = useState<string[]>([]);
+    const [itemSubcategories, setItemSubcategories] = useState<string[]>([]);
 
     useEffect(() => {
-        const fetchFilterOptions = async () => {
-            try {
-                const response = await fetch("/api/records/filter-options");
-                if (response.ok) {
-                    const data = await response.json();
-                    setOptions(data);
-                }
-            } catch (error) {
-                console.error("Error fetching filter options:", error);
-            } finally {
-                setLoadingOptions(false);
-            }
-        };
+        // Load initial options
+        fetch("/api/options?type=company")
+            .then((res) => res.json())
+            .then((data) => setCompanies(data.options || []))
+            .catch((err) => console.error("Failed to load companies:", err));
 
-        fetchFilterOptions();
+        fetch("/api/locations?type=countries")
+            .then((res) => res.json())
+            .then((data) => setCountries(data.countries || []))
+            .catch((err) => console.error("Failed to load countries:", err));
+
+        fetch("/api/options?type=itemCategory")
+            .then((res) => res.json())
+            .then((data) => setItemCategories(data.options || []))
+            .catch((err) => console.error("Failed to load categories:", err));
     }, []);
 
     const handleChange = (
@@ -66,6 +57,55 @@ export default function AdminFilterPanel({ onFilter }: FilterPanelProps) {
     ) => {
         const { name, value } = e.target;
         setFilters((prev) => ({ ...prev, [name]: value }));
+    };
+
+    const handleComboboxChange = (name: string, value: string) => {
+        setFilters((prev) => ({ ...prev, [name]: value }));
+
+        // Load dependent dropdowns
+        if (name === "country" && value) {
+            fetch(
+                `/api/locations?type=states&country=${encodeURIComponent(
+                    value
+                )}`
+            )
+                .then((res) => res.json())
+                .then((data) => setStates(data.states || []))
+                .catch((err) => console.error("Failed to load states:", err));
+        }
+
+        if (name === "state" && value) {
+            Promise.all([
+                fetch(
+                    `/api/locations?type=cities&state=${encodeURIComponent(
+                        value
+                    )}`
+                ).then((r) => r.json()),
+                fetch(
+                    `/api/locations?type=districts&state=${encodeURIComponent(
+                        value
+                    )}`
+                ).then((r) => r.json()),
+            ])
+                .then(([citiesData, districtsData]) => {
+                    setCities(citiesData.cities || []);
+                    setDistricts(districtsData.districts || []);
+                })
+                .catch((err) =>
+                    console.error("Failed to load cities/districts:", err)
+                );
+        }
+
+        if (name === "itemCategory" && value) {
+            fetch(
+                `/api/options?type=itemSubcategory_${encodeURIComponent(value)}`
+            )
+                .then((res) => res.json())
+                .then((data) => setItemSubcategories(data.options || []))
+                .catch((err) =>
+                    console.error("Failed to load subcategories:", err)
+                );
+        }
     };
 
     const handleApplyFilters = () => {
@@ -76,11 +116,13 @@ export default function AdminFilterPanel({ onFilter }: FilterPanelProps) {
         setFilters({
             company: "",
             city: "",
+            district: "",
             state: "",
             country: "",
+            invoiceNo: "",
+            itemCategory: "",
+            itemSubcategory: "",
             transporter: "",
-            bookingType: "",
-            paidOrToPay: "",
             startDate: "",
             endDate: "",
         });
@@ -108,140 +150,170 @@ export default function AdminFilterPanel({ onFilter }: FilterPanelProps) {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
                 <div>
                     <label className="block text-sm font-medium text-foreground mb-2">
                         Company Name
                     </label>
-                    <input
-                        type="text"
-                        name="company"
+                    <Combobox
+                        options={companies}
                         value={filters.company}
-                        onChange={handleChange}
-                        placeholder="Search company..."
-                        list="companies-list"
-                        className="w-full bg-input border border-border text-foreground input-focus rounded-lg px-4 py-2"
+                        onChange={(value) =>
+                            handleComboboxChange("company", value)
+                        }
+                        placeholder="Company name..."
+                        allowCreate={false}
                     />
-                    <datalist id="companies-list">
-                        {options.companies.map((company) => (
-                            <option key={company} value={company} />
-                        ))}
-                    </datalist>
                 </div>
 
                 <div>
                     <label className="block text-sm font-medium text-foreground mb-2">
-                        City
+                        Invoice Number
                     </label>
-                    <input
+                    <Input
                         type="text"
-                        name="city"
-                        value={filters.city}
+                        name="invoiceNo"
+                        placeholder="Invoice number..."
+                        value={filters.invoiceNo}
                         onChange={handleChange}
-                        placeholder="Search city..."
-                        list="cities-list"
-                        className="w-full bg-input border border-border text-foreground input-focus rounded-lg px-4 py-2"
+                        className="w-full"
                     />
-                    <datalist id="cities-list">
-                        {options.cities?.map((city) => (
-                            <option key={city} value={city} />
-                        ))}
-                    </datalist>
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                        State
-                    </label>
-                    <input
-                        type="text"
-                        name="state"
-                        value={filters.state}
-                        onChange={handleChange}
-                        placeholder="Search state..."
-                        list="states-list"
-                        className="w-full bg-input border border-border text-foreground input-focus rounded-lg px-4 py-2"
-                    />
-                    <datalist id="states-list">
-                        {options.states?.map((state) => (
-                            <option key={state} value={state} />
-                        ))}
-                    </datalist>
                 </div>
 
                 <div>
                     <label className="block text-sm font-medium text-foreground mb-2">
                         Country
                     </label>
-                    <input
-                        type="text"
-                        name="country"
+                    <Combobox
+                        options={countries}
                         value={filters.country}
-                        onChange={handleChange}
-                        placeholder="Search country..."
-                        list="countries-list"
-                        className="w-full bg-input border border-border text-foreground input-focus rounded-lg px-4 py-2"
+                        onChange={(value) =>
+                            handleComboboxChange("country", value)
+                        }
+                        placeholder="Country..."
+                        allowCreate={false}
                     />
-                    <datalist id="countries-list">
-                        {options.countries?.map((country) => (
-                            <option key={country} value={country} />
-                        ))}
-                    </datalist>
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                        State
+                    </label>
+                    <Combobox
+                        options={states}
+                        value={filters.state}
+                        onChange={(value) =>
+                            handleComboboxChange("state", value)
+                        }
+                        placeholder={
+                            filters.country
+                                ? "State..."
+                                : "Select country first"
+                        }
+                        allowCreate={false}
+                        className={
+                            !filters.country
+                                ? "opacity-50 cursor-not-allowed"
+                                : ""
+                        }
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                        City
+                    </label>
+                    <Combobox
+                        options={cities}
+                        value={filters.city}
+                        onChange={(value) =>
+                            handleComboboxChange("city", value)
+                        }
+                        placeholder={
+                            filters.state ? "City..." : "Select state first"
+                        }
+                        allowCreate={false}
+                        className={
+                            !filters.state
+                                ? "opacity-50 cursor-not-allowed"
+                                : ""
+                        }
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                        District
+                    </label>
+                    <Combobox
+                        options={districts}
+                        value={filters.district}
+                        onChange={(value) =>
+                            handleComboboxChange("district", value)
+                        }
+                        placeholder={
+                            filters.state ? "District..." : "Select state first"
+                        }
+                        allowCreate={false}
+                        className={
+                            !filters.state
+                                ? "opacity-50 cursor-not-allowed"
+                                : ""
+                        }
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                        Item Category
+                    </label>
+                    <Combobox
+                        options={itemCategories}
+                        value={filters.itemCategory}
+                        onChange={(value) =>
+                            handleComboboxChange("itemCategory", value)
+                        }
+                        placeholder="Item category..."
+                        allowCreate={false}
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                        Item Subcategory
+                    </label>
+                    <Combobox
+                        options={itemSubcategories}
+                        value={filters.itemSubcategory}
+                        onChange={(value) =>
+                            handleComboboxChange("itemSubcategory", value)
+                        }
+                        placeholder={
+                            filters.itemCategory
+                                ? "Item subcategory..."
+                                : "Select category first"
+                        }
+                        allowCreate={false}
+                        className={
+                            !filters.itemCategory
+                                ? "opacity-50 cursor-not-allowed"
+                                : ""
+                        }
+                    />
                 </div>
 
                 <div>
                     <label className="block text-sm font-medium text-foreground mb-2">
                         Transporter
                     </label>
-                    <input
+                    <Input
                         type="text"
                         name="transporter"
                         value={filters.transporter}
                         onChange={handleChange}
-                        placeholder="Search transporter..."
-                        list="transporters-list"
-                        className="w-full bg-input border border-border text-foreground input-focus rounded-lg px-4 py-2"
+                        placeholder="Transporter..."
+                        className="w-full"
                     />
-                    <datalist id="transporters-list">
-                        {options.transporters.map((trans) => (
-                            <option key={trans} value={trans} />
-                        ))}
-                    </datalist>
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                        Booking Type
-                    </label>
-                    <select
-                        name="bookingType"
-                        value={filters.bookingType}
-                        onChange={handleChange}
-                        className="w-full px-4 py-2 border border-border rounded-lg text-sm bg-input text-foreground input-focus"
-                    >
-                        <option value="">All Types</option>
-                        {options.bookingTypes.map((type) => (
-                            <option key={type} value={type}>
-                                {type}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                        Payment Status
-                    </label>
-                    <select
-                        name="paidOrToPay"
-                        value={filters.paidOrToPay}
-                        onChange={handleChange}
-                        className="w-full px-4 py-2 border border-border rounded-lg text-sm bg-input text-foreground input-focus"
-                    >
-                        <option value="">All Status</option>
-                        <option value="Paid">Paid</option>
-                        <option value="To Pay">To Pay</option>
-                    </select>
                 </div>
 
                 <div>
@@ -253,7 +325,7 @@ export default function AdminFilterPanel({ onFilter }: FilterPanelProps) {
                         name="startDate"
                         value={filters.startDate}
                         onChange={handleChange}
-                        className="w-full bg-input border border-border text-foreground input-focus rounded-lg px-4 py-2"
+                        className="w-full"
                     />
                 </div>
 
@@ -266,7 +338,7 @@ export default function AdminFilterPanel({ onFilter }: FilterPanelProps) {
                         name="endDate"
                         value={filters.endDate}
                         onChange={handleChange}
-                        className="w-full bg-input border border-border text-foreground input-focus rounded-lg px-4 py-2"
+                        className="w-full"
                     />
                 </div>
             </div>

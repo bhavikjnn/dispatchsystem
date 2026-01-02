@@ -5,7 +5,8 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { ITEM_DESCRIPTIONS } from "@/lib/item-descriptions";
+import { Combobox } from "@/components/ui/combobox";
+import { ITEM_CATEGORY_LIST, getSubcategories } from "@/lib/item-descriptions";
 
 const BOOKING_TYPES = ["Standard", "Express", "Priority", "Door Delivery"];
 const PAYMENT_TYPES = ["Paid", "To Pay"];
@@ -20,6 +21,14 @@ const PAYMENT_DETAILS_OPTIONS = [
     "Check Payment",
 ];
 
+interface ItemData {
+    itemCategory: string;
+    itemSubcategory: string;
+    rate: number;
+    qty: number;
+    amount: number;
+}
+
 interface RecordFormData {
     companyName: string;
     contactPerson: string;
@@ -32,10 +41,6 @@ interface RecordFormData {
     country: string;
     invoiceNo: string;
     invDate: string;
-    itemDescription: string;
-    rate: number;
-    qty: number;
-    amount: number;
     transporterName: string;
     paidOrToPay: "Paid" | "To Pay";
     bookingType: string;
@@ -55,36 +60,76 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
         country: "India",
         invoiceNo: "",
         invDate: "",
-        itemDescription: "",
-        rate: 0,
-        qty: 0,
-        amount: 0,
         transporterName: "",
         paidOrToPay: "Paid",
         bookingType: "Standard",
         paymentDetails: "",
     });
 
+    const [items, setItems] = useState<ItemData[]>([
+        {
+            itemCategory: "",
+            itemSubcategory: "",
+            rate: 0,
+            qty: 0,
+            amount: 0,
+        },
+    ]);
+
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState(false);
 
     // Dependent dropdown options
+    const [companies, setCompanies] = useState<string[]>([]);
     const [countries, setCountries] = useState<string[]>([]);
+    const [itemCategories, setItemCategories] =
+        useState<string[]>(ITEM_CATEGORY_LIST);
     const [availableStates, setAvailableStates] = useState<string[]>([]);
     const [availableCities, setAvailableCities] = useState<string[]>([]);
     const [availableDistricts, setAvailableDistricts] = useState<string[]>([]);
 
-    // Manual entry flags
-    const [manualCity, setManualCity] = useState(false);
-    const [manualDistrict, setManualDistrict] = useState(false);
+    // Subcategories for each item
+    const [itemSubcategories, setItemSubcategories] = useState<{
+        [key: number]: string[];
+    }>({});
 
-    // Load countries on mount
+    // Load companies, countries and item categories on mount
     useEffect(() => {
+        // Fetch companies from options API
+        fetch("/api/options?type=company")
+            .then((res) => res.json())
+            .then((data) => {
+                console.log("[RecordForm] Received companies:", data);
+                setCompanies(data.options || []);
+            })
+            .catch((err) => console.error("Failed to load companies:", err));
+
         fetch("/api/locations?type=countries")
             .then((res) => res.json())
             .then((data) => setCountries(data.countries || []))
             .catch((err) => console.error("Failed to load countries:", err));
+
+        // Fetch item categories from MongoDB
+        console.log("[RecordForm] Fetching item categories from MongoDB...");
+        fetch("/api/options?type=itemCategory")
+            .then((res) => res.json())
+            .then((data) => {
+                console.log("[RecordForm] Received item categories:", data);
+                if (data.options && data.options.length > 0) {
+                    console.log(
+                        `[RecordForm] Setting ${data.options.length} categories`
+                    );
+                    setItemCategories(data.options);
+                } else {
+                    console.log(
+                        "[RecordForm] No categories from API, using fallback"
+                    );
+                }
+            })
+            .catch((err) => {
+                console.error("Failed to load item categories:", err);
+            });
     }, []);
 
     // Update states when country changes
@@ -145,6 +190,47 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
         }
     }, [formData.state]);
 
+    // Load subcategories when item category changes
+    const loadSubcategories = (itemIndex: number, category: string) => {
+        if (category) {
+            fetch(
+                `/api/options?type=itemSubcategory_${encodeURIComponent(
+                    category
+                )}`
+            )
+                .then((res) => res.json())
+                .then((data) => {
+                    const subcats = data.options || [];
+                    // Fallback to hardcoded if empty
+                    if (subcats.length === 0) {
+                        const hardcodedSubcats = getSubcategories(category);
+                        setItemSubcategories((prev) => ({
+                            ...prev,
+                            [itemIndex]: hardcodedSubcats,
+                        }));
+                    } else {
+                        setItemSubcategories((prev) => ({
+                            ...prev,
+                            [itemIndex]: subcats,
+                        }));
+                    }
+                })
+                .catch((err) => {
+                    console.error("Failed to load subcategories:", err);
+                    const hardcodedSubcats = getSubcategories(category);
+                    setItemSubcategories((prev) => ({
+                        ...prev,
+                        [itemIndex]: hardcodedSubcats,
+                    }));
+                });
+        } else {
+            setItemSubcategories((prev) => ({
+                ...prev,
+                [itemIndex]: [],
+            }));
+        }
+    };
+
     const handleChange = (
         e: React.ChangeEvent<
             HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
@@ -160,6 +246,58 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
         }));
     };
 
+    const handleComboboxChange = (name: string, value: string) => {
+        setFormData((prev) => ({
+            ...prev,
+            [name]: value,
+        }));
+    };
+
+    const handleItemChange = (
+        index: number,
+        field: keyof ItemData,
+        value: string | number
+    ) => {
+        const newItems = [...items];
+        newItems[index] = {
+            ...newItems[index],
+            [field]: value,
+        };
+        setItems(newItems);
+
+        // Load subcategories when category changes
+        if (field === "itemCategory" && typeof value === "string") {
+            loadSubcategories(index, value);
+            // Reset subcategory
+            newItems[index].itemSubcategory = "";
+            setItems(newItems);
+        }
+    };
+
+    const addItem = () => {
+        setItems([
+            ...items,
+            {
+                itemCategory: "",
+                itemSubcategory: "",
+                rate: 0,
+                qty: 0,
+                amount: 0,
+            },
+        ]);
+    };
+
+    const removeItem = (index: number) => {
+        if (items.length > 1) {
+            const newItems = items.filter((_, i) => i !== index);
+            setItems(newItems);
+            // Clean up subcategories
+            const newSubcats = { ...itemSubcategories };
+            delete newSubcats[index];
+            setItemSubcategories(newSubcats);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
@@ -167,17 +305,29 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
         setSuccess(false);
 
         try {
-            const response = await fetch("/api/records", {
+            // Validate that at least one item has category
+            const validItems = items.filter((item) => item.itemCategory);
+            if (validItems.length === 0) {
+                throw new Error("Please add at least one item with a category");
+            }
+
+            // Create a record for each item
+            const records = validItems.map((item) => ({
+                ...formData,
+                ...item,
+                invDate: new Date(formData.invDate),
+            }));
+
+            // Send all records in one request
+            const response = await fetch("/api/records/bulk-create", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    ...formData,
-                    invDate: new Date(formData.invDate),
-                }),
+                body: JSON.stringify({ records }),
             });
 
             if (!response.ok) {
-                throw new Error("Failed to create record");
+                const data = await response.json();
+                throw new Error(data.error || "Failed to create records");
             }
 
             setSuccess(true);
@@ -193,15 +343,21 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
                 country: "India",
                 invoiceNo: "",
                 invDate: "",
-                itemDescription: "",
-                rate: 0,
-                qty: 0,
-                amount: 0,
                 transporterName: "",
                 paidOrToPay: "Paid",
                 bookingType: "Standard",
                 paymentDetails: "",
             });
+            setItems([
+                {
+                    itemCategory: "",
+                    itemSubcategory: "",
+                    rate: 0,
+                    qty: 0,
+                    amount: 0,
+                },
+            ]);
+            setItemSubcategories({});
 
             if (onSuccess) onSuccess();
 
@@ -254,26 +410,26 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
                         <label className="block text-sm font-medium text-foreground mb-2">
                             Company Name *
                         </label>
-                        <Input
-                            type="text"
-                            name="companyName"
+                        <Combobox
+                            options={companies}
                             value={formData.companyName}
-                            onChange={handleChange}
-                            required
-                            className="w-full bg-input border border-border text-foreground input-focus rounded-lg px-4 py-2"
-                            placeholder="e.g., Paras Polymers"
+                            onChange={(value) =>
+                                handleComboboxChange("companyName", value)
+                            }
+                            placeholder="Select or create company..."
+                            allowCreate={true}
+                            optionType="company"
                         />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-foreground mb-2">
-                            Contact Person *
+                            Contact Person
                         </label>
                         <Input
                             type="text"
                             name="contactPerson"
                             value={formData.contactPerson}
                             onChange={handleChange}
-                            required
                             className="w-full bg-input border border-border text-foreground input-focus rounded-lg px-4 py-2"
                             placeholder="e.g., Mr. Neel"
                         />
@@ -283,28 +439,26 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label className="block text-sm font-medium text-foreground mb-2">
-                            Contact Number *
+                            Contact Number
                         </label>
                         <Input
                             type="tel"
                             name="contactNo"
                             value={formData.contactNo}
                             onChange={handleChange}
-                            required
                             className="w-full bg-input border border-border text-foreground input-focus rounded-lg px-4 py-2"
                             placeholder="+91 7201877472"
                         />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-foreground mb-2">
-                            Email *
+                            Email
                         </label>
                         <Input
                             type="email"
                             name="email"
                             value={formData.email}
                             onChange={handleChange}
-                            required
                             className="w-full bg-input border border-border text-foreground input-focus rounded-lg px-4 py-2"
                             placeholder="john@company.com"
                         />
@@ -335,44 +489,40 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
                             <label className="block text-sm font-medium text-foreground mb-2">
                                 Country *
                             </label>
-                            <select
-                                name="country"
+                            <Combobox
+                                options={countries}
                                 value={formData.country}
-                                onChange={handleChange}
-                                required
-                                className="w-full px-4 py-2 border border-border rounded-lg text-sm bg-input text-foreground input-focus"
-                            >
-                                <option value="">Select country...</option>
-                                {countries.map((country) => (
-                                    <option key={country} value={country}>
-                                        {country}
-                                    </option>
-                                ))}
-                            </select>
+                                onChange={(value) =>
+                                    handleComboboxChange("country", value)
+                                }
+                                placeholder="Select country..."
+                                allowCreate={true}
+                                optionType="country"
+                            />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-2">
                                 State *
                             </label>
-                            <select
-                                name="state"
+                            <Combobox
+                                options={availableStates}
                                 value={formData.state}
-                                onChange={handleChange}
-                                required
-                                disabled={!formData.country}
-                                className="w-full px-4 py-2 border border-border rounded-lg text-sm bg-input text-foreground input-focus disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                <option value="">
-                                    {formData.country
+                                onChange={(value) =>
+                                    handleComboboxChange("state", value)
+                                }
+                                placeholder={
+                                    formData.country
                                         ? "Select state..."
-                                        : "Select country first"}
-                                </option>
-                                {availableStates.map((state) => (
-                                    <option key={state} value={state}>
-                                        {state}
-                                    </option>
-                                ))}
-                            </select>
+                                        : "Select country first"
+                                }
+                                allowCreate={true}
+                                optionType="state"
+                                className={
+                                    !formData.country
+                                        ? "opacity-50 cursor-not-allowed"
+                                        : ""
+                                }
+                            />
                         </div>
                     </div>
 
@@ -381,49 +531,49 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
                             <label className="block text-sm font-medium text-foreground mb-2">
                                 City *
                             </label>
-                            <select
-                                name="city"
+                            <Combobox
+                                options={availableCities}
                                 value={formData.city}
-                                onChange={handleChange}
-                                required
-                                disabled={!formData.state}
-                                className="w-full px-4 py-2 border border-border rounded-lg text-sm bg-input text-foreground input-focus disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                <option value="">
-                                    {formData.state
+                                onChange={(value) =>
+                                    handleComboboxChange("city", value)
+                                }
+                                placeholder={
+                                    formData.state
                                         ? "Select city..."
-                                        : "Select state first"}
-                                </option>
-                                {availableCities.map((city) => (
-                                    <option key={city} value={city}>
-                                        {city}
-                                    </option>
-                                ))}
-                            </select>
+                                        : "Select state first"
+                                }
+                                emptyText="No city found."
+                                allowCreate={true}
+                                className={
+                                    !formData.state
+                                        ? "opacity-50 cursor-not-allowed"
+                                        : ""
+                                }
+                            />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-2">
-                                District *
+                                District
                             </label>
-                            <select
-                                name="district"
+                            <Combobox
+                                options={availableDistricts}
                                 value={formData.district}
-                                onChange={handleChange}
-                                required
-                                disabled={!formData.state}
-                                className="w-full px-4 py-2 border border-border rounded-lg text-sm bg-input text-foreground input-focus disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                <option value="">
-                                    {formData.state
+                                onChange={(value) =>
+                                    handleComboboxChange("district", value)
+                                }
+                                placeholder={
+                                    formData.state
                                         ? "Select district..."
-                                        : "Select state first"}
-                                </option>
-                                {availableDistricts.map((district) => (
-                                    <option key={district} value={district}>
-                                        {district}
-                                    </option>
-                                ))}
-                            </select>
+                                        : "Select state first"
+                                }
+                                emptyText="No district found."
+                                allowCreate={true}
+                                className={
+                                    !formData.state
+                                        ? "opacity-50 cursor-not-allowed"
+                                        : ""
+                                }
+                            />
                         </div>
                     </div>
                 </div>
@@ -458,72 +608,189 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
                     </div>
                 </div>
 
-                <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                        Item Description *
-                    </label>
-                    <select
-                        name="itemDescription"
-                        value={formData.itemDescription}
-                        onChange={handleChange}
-                        required
-                        className="w-full px-4 py-2 border border-border rounded-lg text-sm bg-input text-foreground input-focus"
-                    >
-                        <option value="">Select item...</option>
-                        {ITEM_DESCRIPTIONS.map((item) => (
-                            <option key={item} value={item}>
-                                {item}
-                            </option>
-                        ))}
-                    </select>
-                </div>
+                <div className="border-t border-border pt-6">
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-semibold text-foreground">
+                            Items
+                        </h3>
+                        <Button
+                            type="button"
+                            onClick={addItem}
+                            className="button-secondary flex items-center gap-2"
+                        >
+                            <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M12 4v16m8-8H4"
+                                />
+                            </svg>
+                            Add Item
+                        </Button>
+                    </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div>
-                        <label className="block text-sm font-medium text-foreground mb-2">
-                            Rate (₹) *
-                        </label>
-                        <Input
-                            type="number"
-                            name="rate"
-                            value={formData.rate || ""}
-                            onChange={handleChange}
-                            required
-                            step="0.01"
-                            className="w-full bg-input border border-border text-foreground input-focus rounded-lg px-4 py-2"
-                            placeholder="0.00"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-foreground mb-2">
-                            Quantity *
-                        </label>
-                        <Input
-                            type="number"
-                            name="qty"
-                            value={formData.qty || ""}
-                            onChange={handleChange}
-                            required
-                            step="1"
-                            className="w-full bg-input border border-border text-foreground input-focus rounded-lg px-4 py-2"
-                            placeholder="0"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-foreground mb-2">
-                            Amount (₹) *
-                        </label>
-                        <Input
-                            type="number"
-                            name="amount"
-                            value={formData.amount || ""}
-                            onChange={handleChange}
-                            required
-                            step="0.01"
-                            className="w-full bg-input border border-border text-foreground input-focus rounded-lg px-4 py-2"
-                            placeholder="0.00"
-                        />
-                    </div>
+                    {items.map((item, index) => (
+                        <div
+                            key={index}
+                            className="mb-6 p-4 border border-border rounded-lg bg-secondary/5"
+                        >
+                            <div className="flex justify-between items-center mb-4">
+                                <h4 className="text-sm font-semibold text-foreground">
+                                    Item {index + 1}
+                                </h4>
+                                {items.length > 1 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => removeItem(index)}
+                                        className="text-destructive hover:text-destructive/80 text-sm flex items-center gap-1"
+                                    >
+                                        <svg
+                                            className="w-4 h-4"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                            />
+                                        </svg>
+                                        Remove
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-foreground mb-2">
+                                        Item Category *
+                                    </label>
+                                    <Combobox
+                                        options={itemCategories}
+                                        value={item.itemCategory}
+                                        onChange={(value) =>
+                                            handleItemChange(
+                                                index,
+                                                "itemCategory",
+                                                value
+                                            )
+                                        }
+                                        placeholder="Select category..."
+                                        allowCreate={true}
+                                        optionType="itemCategory"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-foreground mb-2">
+                                        Item Subcategory
+                                    </label>
+                                    <Combobox
+                                        options={itemSubcategories[index] || []}
+                                        value={item.itemSubcategory}
+                                        onChange={(value) =>
+                                            handleItemChange(
+                                                index,
+                                                "itemSubcategory",
+                                                value
+                                            )
+                                        }
+                                        placeholder={
+                                            item.itemCategory
+                                                ? "Select subcategory..."
+                                                : "Select category first"
+                                        }
+                                        allowCreate={true}
+                                        optionType={
+                                            item.itemCategory
+                                                ? `itemSubcategory_${item.itemCategory}`
+                                                : undefined
+                                        }
+                                        className={
+                                            !item.itemCategory
+                                                ? "opacity-50 cursor-not-allowed"
+                                                : ""
+                                        }
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-foreground mb-2">
+                                        Rate (₹)
+                                    </label>
+                                    <Input
+                                        type="number"
+                                        value={item.rate || ""}
+                                        onChange={(e) =>
+                                            handleItemChange(
+                                                index,
+                                                "rate",
+                                                Number.parseFloat(
+                                                    e.target.value
+                                                ) || 0
+                                            )
+                                        }
+                                        step="0.01"
+                                        className="w-full bg-input border border-border text-foreground input-focus rounded-lg px-4 py-2"
+                                        placeholder="0.00"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-foreground mb-2">
+                                        Quantity *
+                                    </label>
+                                    <Input
+                                        type="number"
+                                        value={item.qty || ""}
+                                        onChange={(e) =>
+                                            handleItemChange(
+                                                index,
+                                                "qty",
+                                                Number.parseInt(
+                                                    e.target.value,
+                                                    10
+                                                ) || 0
+                                            )
+                                        }
+                                        required
+                                        step="1"
+                                        className="w-full bg-input border border-border text-foreground input-focus rounded-lg px-4 py-2"
+                                        placeholder="0"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-foreground mb-2">
+                                        Amount (₹)
+                                    </label>
+                                    <Input
+                                        type="number"
+                                        value={item.amount || ""}
+                                        onChange={(e) =>
+                                            handleItemChange(
+                                                index,
+                                                "amount",
+                                                Number.parseFloat(
+                                                    e.target.value
+                                                ) || 0
+                                            )
+                                        }
+                                        step="0.01"
+                                        className="w-full bg-input border border-border text-foreground input-focus rounded-lg px-4 py-2"
+                                        placeholder="0.00"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    ))}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -545,56 +812,49 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
                         <label className="block text-sm font-medium text-foreground mb-2">
                             Booking Type *
                         </label>
-                        <select
-                            name="bookingType"
+                        <Combobox
+                            options={BOOKING_TYPES}
                             value={formData.bookingType}
-                            onChange={handleChange}
-                            className="w-full px-4 py-2 border border-border rounded-lg text-sm bg-input text-foreground input-focus"
-                        >
-                            {BOOKING_TYPES.map((type) => (
-                                <option key={type} value={type}>
-                                    {type}
-                                </option>
-                            ))}
-                        </select>
+                            onChange={(value) =>
+                                handleComboboxChange("bookingType", value)
+                            }
+                            placeholder="Select booking type..."
+                            emptyText="No booking type found."
+                            allowCreate={true}
+                        />
                     </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label className="block text-sm font-medium text-foreground mb-2">
-                            Payment Status *
+                            Payment Status
                         </label>
-                        <select
-                            name="paidOrToPay"
+                        <Combobox
+                            options={PAYMENT_TYPES}
                             value={formData.paidOrToPay}
-                            onChange={handleChange}
-                            className="w-full px-4 py-2 border border-border rounded-lg text-sm bg-input text-foreground input-focus"
-                        >
-                            {PAYMENT_TYPES.map((type) => (
-                                <option key={type} value={type}>
-                                    {type}
-                                </option>
-                            ))}
-                        </select>
+                            onChange={(value) =>
+                                handleComboboxChange("paidOrToPay", value)
+                            }
+                            placeholder="Select payment status..."
+                            emptyText="No payment status found."
+                            allowCreate={false}
+                        />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-foreground mb-2">
                             Payment Details
                         </label>
-                        <select
-                            name="paymentDetails"
+                        <Combobox
+                            options={PAYMENT_DETAILS_OPTIONS}
                             value={formData.paymentDetails}
-                            onChange={handleChange}
-                            className="w-full px-4 py-2 border border-border rounded-lg text-sm bg-input text-foreground input-focus"
-                        >
-                            <option value="">Select payment details...</option>
-                            {PAYMENT_DETAILS_OPTIONS.map((detail) => (
-                                <option key={detail} value={detail}>
-                                    {detail}
-                                </option>
-                            ))}
-                        </select>
+                            onChange={(value) =>
+                                handleComboboxChange("paymentDetails", value)
+                            }
+                            placeholder="Select payment details..."
+                            emptyText="No payment details found."
+                            allowCreate={true}
+                        />
                     </div>
                 </div>
 
