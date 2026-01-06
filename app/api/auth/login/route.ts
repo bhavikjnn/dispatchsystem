@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
-import { verifyPassword, createToken } from "@/lib/auth";
+import { verifyPassword, createToken, isWithinAllowedHours } from "@/lib/auth";
 import { cookies } from "next/headers";
 
 export async function POST(request: NextRequest) {
@@ -43,6 +43,45 @@ export async function POST(request: NextRequest) {
                 { error: "Invalid credentials" },
                 { status: 401 }
             );
+        }
+
+        // Check if employee is logging in within allowed hours (global setting)
+        if (user.role === "employee") {
+            const settings = await db.collection("settings").findOne({
+                _id: "global",
+            });
+
+            const allowedHours = settings?.employeeLoginHours;
+            if (!isWithinAllowedHours(allowedHours)) {
+                const startTime = allowedHours?.startTime || "N/A";
+                const endTime = allowedHours?.endTime || "N/A";
+
+                // Log the blocked login attempt
+                await db.collection("login_attempts").insertOne({
+                    userId: user._id,
+                    email: user.email,
+                    name: user.name,
+                    attemptTime: new Date(),
+                    status: "blocked",
+                    reason: "outside_allowed_hours",
+                    allowedHours: {
+                        startTime,
+                        endTime,
+                    },
+                    ipAddress:
+                        request.headers.get("x-forwarded-for") ||
+                        request.headers.get("x-real-ip") ||
+                        "unknown",
+                });
+
+                return NextResponse.json(
+                    {
+                        error: `Login is only allowed between ${startTime} and ${endTime}. Please contact your administrator.`,
+                        code: "OUTSIDE_ALLOWED_HOURS",
+                    },
+                    { status: 403 }
+                );
+            }
         }
 
         const token = await createToken(user._id.toString(), email, user.role);

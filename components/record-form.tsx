@@ -151,8 +151,6 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
                     }));
                     setAvailableCities([]);
                     setAvailableDistricts([]);
-                    setManualCity(false);
-                    setManualDistrict(false);
                 })
                 .catch((err) => console.error("Failed to load states:", err));
         }
@@ -181,8 +179,6 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
                         city: "",
                         district: "",
                     }));
-                    setManualCity(false);
-                    setManualDistrict(false);
                 })
                 .catch((err) =>
                     console.error("Failed to load cities/districts:", err)

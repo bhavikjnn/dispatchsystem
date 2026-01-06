@@ -8,6 +8,8 @@ import AdminOrdersTable from "@/components/admin-orders-table";
 import AuditLogsTable from "@/components/audit-logs-table";
 import DownloadButton from "@/components/download-button";
 import FieldVisibilityConfig from "@/components/field-visibility-config";
+import GlobalLoginHours from "@/components/global-login-hours";
+import BlockedLoginAttempts from "@/components/blocked-login-attempts";
 
 interface User {
     id: string;
@@ -21,7 +23,7 @@ export default function AdminPage() {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<
-        "records" | "visibility" | "logs"
+        "records" | "visibility" | "logs" | "hours"
     >("records");
     const [filters, setFilters] = useState({});
     const [refreshKey, setRefreshKey] = useState(0);
@@ -190,6 +192,29 @@ export default function AdminPage() {
                         </svg>
                         Audit Logs
                     </button>
+                    <button
+                        onClick={() => setActiveTab("hours")}
+                        className={`px-4 py-3 font-medium border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
+                            activeTab === "hours"
+                                ? "border-primary text-primary"
+                                : "border-transparent text-muted-foreground hover:text-foreground"
+                        }`}
+                    >
+                        <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                            />
+                        </svg>
+                        Login Hours
+                    </button>
                 </div>
 
                 {activeTab === "records" && (
@@ -245,6 +270,25 @@ export default function AdminPage() {
                             </p>
                         </div>
                         <AuditLogsTable />
+                    </div>
+                )}
+
+                {activeTab === "hours" && (
+                    <div className="space-y-6">
+                        <div>
+                            <h2 className="text-2xl font-bold text-foreground">
+                                Employee Login Hours
+                            </h2>
+                            <p className="text-sm text-muted-foreground mt-1">
+                                Configure allowed login hours for all employees
+                                to restrict access outside working hours
+                            </p>
+                        </div>
+                        <GlobalLoginHours />
+
+                        <div className="border-t border-border pt-6 mt-8">
+                            <BlockedLoginAttempts />
+                        </div>
                     </div>
                 )}
             </div>

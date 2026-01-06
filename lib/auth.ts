@@ -15,6 +15,45 @@ export interface User {
     createdAt: Date;
 }
 
+export function isWithinAllowedHours(allowedLoginHours?: {
+    enabled: boolean;
+    startTime: string;
+    endTime: string;
+}): boolean {
+    // If not configured or disabled, allow login
+    if (!allowedLoginHours || !allowedLoginHours.enabled) {
+        return true;
+    }
+
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentTimeInMinutes = currentHour * 60 + currentMinute;
+
+    const [startHour, startMinute] = allowedLoginHours.startTime
+        .split(":")
+        .map(Number);
+    const [endHour, endMinute] = allowedLoginHours.endTime
+        .split(":")
+        .map(Number);
+
+    const startTimeInMinutes = startHour * 60 + startMinute;
+    const endTimeInMinutes = endHour * 60 + endMinute;
+
+    // Handle cases where end time is before start time (crosses midnight)
+    if (endTimeInMinutes < startTimeInMinutes) {
+        return (
+            currentTimeInMinutes >= startTimeInMinutes ||
+            currentTimeInMinutes <= endTimeInMinutes
+        );
+    }
+
+    return (
+        currentTimeInMinutes >= startTimeInMinutes &&
+        currentTimeInMinutes <= endTimeInMinutes
+    );
+}
+
 export async function hashPassword(password: string): Promise<string> {
     return hash(password, 10);
 }
