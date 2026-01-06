@@ -3,12 +3,11 @@ const nextConfig = {
     typescript: {
         ignoreBuildErrors: true,
     },
-    eslint: {
-        ignoreDuringBuilds: true,
-    },
     images: {
         unoptimized: true,
     },
+    // Empty turbopack config to silence the warning
+    turbopack: {},
     // Exclude problematic native dependencies from webpack
     webpack: (config, { isServer }) => {
         if (isServer) {
