@@ -10,6 +10,7 @@ import DownloadButton from "@/components/download-button";
 import FieldVisibilityConfig from "@/components/field-visibility-config";
 import GlobalLoginHours from "@/components/global-login-hours";
 import BlockedLoginAttempts from "@/components/blocked-login-attempts";
+import CompanyDetails from "@/components/company-details";
 
 interface User {
     id: string;
@@ -23,7 +24,7 @@ export default function AdminPage() {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<
-        "records" | "visibility" | "logs" | "hours"
+        "records" | "visibility" | "logs" | "hours" | "company"
     >("records");
     const [filters, setFilters] = useState({});
     const [refreshKey, setRefreshKey] = useState(0);
@@ -215,6 +216,29 @@ export default function AdminPage() {
                         </svg>
                         Login Hours
                     </button>
+                    <button
+                        onClick={() => setActiveTab("company")}
+                        className={`px-4 py-3 font-medium border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
+                            activeTab === "company"
+                                ? "border-primary text-primary"
+                                : "border-transparent text-muted-foreground hover:text-foreground"
+                        }`}
+                    >
+                        <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"
+                            />
+                        </svg>
+                        Company Details
+                    </button>
                 </div>
 
                 {activeTab === "records" && (
@@ -289,6 +313,21 @@ export default function AdminPage() {
                         <div className="border-t border-border pt-6 mt-8">
                             <BlockedLoginAttempts />
                         </div>
+                    </div>
+                )}
+
+                {activeTab === "company" && (
+                    <div className="space-y-6">
+                        <div>
+                            <h2 className="text-2xl font-bold text-foreground">
+                                Company Details
+                            </h2>
+                            <p className="text-sm text-muted-foreground mt-1">
+                                Manage company information including folder and
+                                file numbers
+                            </p>
+                        </div>
+                        <CompanyDetails />
                     </div>
                 )}
             </div>
