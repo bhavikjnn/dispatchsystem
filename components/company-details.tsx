@@ -68,9 +68,7 @@ export default function CompanyDetails() {
         }
     };
 
-    const handleInputChange = (
-        e: React.ChangeEvent<HTMLInputElement>
-    ) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setFormData((prev) => ({
             ...prev,
@@ -157,9 +155,12 @@ export default function CompanyDetails() {
 
         try {
             setError(null);
-            const response = await fetch(`/api/admin/company-details?id=${id}`, {
-                method: "DELETE",
-            });
+            const response = await fetch(
+                `/api/admin/company-details?id=${id}`,
+                {
+                    method: "DELETE",
+                }
+            );
 
             if (!response.ok) {
                 throw new Error("Failed to delete company details");
@@ -198,7 +199,9 @@ export default function CompanyDetails() {
             {(isAddingNew || editingId) && (
                 <Card className="p-6 bg-blue-50 border border-blue-200">
                     <h3 className="text-lg font-semibold text-foreground mb-4">
-                        {editingId ? "Edit Company Details" : "Add New Company Details"}
+                        {editingId
+                            ? "Edit Company Details"
+                            : "Add New Company Details"}
                     </h3>
                     <div className="space-y-4">
                         <div className="space-y-2">
@@ -345,7 +348,9 @@ export default function CompanyDetails() {
                                         </td>
                                         <td className="px-6 py-4 text-sm flex gap-2">
                                             <Button
-                                                onClick={() => handleEdit(detail)}
+                                                onClick={() =>
+                                                    handleEdit(detail)
+                                                }
                                                 disabled={editingId !== null}
                                                 className="button-secondary h-8 px-3 text-xs"
                                             >
@@ -439,8 +444,11 @@ export default function CompanyDetails() {
                 <div className="flex items-center justify-between">
                     <p className="text-sm text-muted-foreground">
                         Showing {(currentPage - 1) * pagination.limit + 1} to{" "}
-                        {Math.min(currentPage * pagination.limit, pagination.total)} of{" "}
-                        {pagination.total} results
+                        {Math.min(
+                            currentPage * pagination.limit,
+                            pagination.total
+                        )}{" "}
+                        of {pagination.total} results
                     </p>
                     <div className="flex gap-2">
                         <Button
