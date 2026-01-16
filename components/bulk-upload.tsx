@@ -324,7 +324,6 @@ ABC Industries,Ms. Priya,+91 9876543210,priya@abcindustries.com,Email,India,Maha
                             <button
                                 onClick={() => {
                                     setFile(null);
-                                    setAnalysisResult(null);
                                     if (fileInputRef.current) {
                                         fileInputRef.current.value = "";
                                     }

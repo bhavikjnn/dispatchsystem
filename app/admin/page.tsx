@@ -11,6 +11,8 @@ import FieldVisibilityConfig from "@/components/field-visibility-config";
 import GlobalLoginHours from "@/components/global-login-hours";
 import BlockedLoginAttempts from "@/components/blocked-login-attempts";
 import CompanyDetails from "@/components/company-details";
+import BulkUpload from "@/components/bulk-upload";
+import RecordForm from "@/components/record-form";
 
 interface User {
     id: string;
@@ -24,7 +26,7 @@ export default function AdminPage() {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<
-        "records" | "visibility" | "logs" | "hours" | "company"
+        "records" | "upload" | "visibility" | "logs" | "hours" | "company"
     >("records");
     const [filters, setFilters] = useState({});
     const [refreshKey, setRefreshKey] = useState(0);
@@ -140,6 +142,29 @@ export default function AdminPage() {
                             />
                         </svg>
                         Records
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("upload")}
+                        className={`px-4 py-3 font-medium border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
+                            activeTab === "upload"
+                                ? "border-primary text-primary"
+                                : "border-transparent text-muted-foreground hover:text-foreground"
+                        }`}
+                    >
+                        <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                            />
+                        </svg>
+                        Upload Data
                     </button>
                     <button
                         onClick={() => setActiveTab("visibility")}
@@ -264,6 +289,33 @@ export default function AdminPage() {
                             filters={filters}
                             refreshKey={refreshKey}
                         />
+                    </div>
+                )}
+
+                {activeTab === "upload" && (
+                    <div className="space-y-6">
+                        <div>
+                            <h2 className="text-2xl font-bold text-foreground">
+                                Upload & Create Records
+                            </h2>
+                            <p className="text-sm text-muted-foreground mt-1">
+                                Create records manually or upload in bulk using
+                                CSV/Excel files
+                            </p>
+                        </div>
+                        <div className="space-y-6">
+                            <RecordForm
+                                onSuccess={() => setRefreshKey((k) => k + 1)}
+                            />
+
+                            <div className="pt-6 border-t border-border">
+                                <BulkUpload
+                                    onSuccess={() =>
+                                        setRefreshKey((k) => k + 1)
+                                    }
+                                />
+                            </div>
+                        </div>
                     </div>
                 )}
 
