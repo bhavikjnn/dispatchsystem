@@ -87,7 +87,9 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
         useState<string[]>(ITEM_CATEGORY_LIST);
     const [availableStates, setAvailableStates] = useState<string[]>([]);
     const [availableCities, setAvailableCities] = useState<string[]>([]);
+    const [allCities, setAllCities] = useState<string[]>([]);
     const [availableDistricts, setAvailableDistricts] = useState<string[]>([]);
+    const [allDistricts, setAllDistricts] = useState<string[]>([]);
 
     // Subcategories for each item
     const [itemSubcategories, setItemSubcategories] = useState<{
@@ -109,6 +111,24 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
             .then((res) => res.json())
             .then((data) => setCountries(data.countries || []))
             .catch((err) => console.error("Failed to load countries:", err));
+
+        fetch("/api/locations?type=cities")
+            .then((res) => res.json())
+            .then((data) => {
+                const cityList = data.cities || [];
+                setAllCities(cityList);
+                setAvailableCities(cityList);
+            })
+            .catch((err) => console.error("Failed to load cities:", err));
+
+        fetch("/api/locations?type=districts")
+            .then((res) => res.json())
+            .then((data) => {
+                const districtList = data.districts || [];
+                setAllDistricts(districtList);
+                setAvailableDistricts(districtList);
+            })
+            .catch((err) => console.error("Failed to load districts:", err));
 
         // Fetch item categories from MongoDB
         console.log("[RecordForm] Fetching item categories from MongoDB...");
@@ -183,8 +203,11 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
                 .catch((err) =>
                     console.error("Failed to load cities/districts:", err)
                 );
+        } else {
+            setAvailableCities(allCities);
+            setAvailableDistricts(allDistricts);
         }
-    }, [formData.state]);
+    }, [formData.state, allCities, allDistricts]);
 
     // Load subcategories when item category changes
     const loadSubcategories = (itemIndex: number, category: string) => {
@@ -542,15 +565,10 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
                                 placeholder={
                                     formData.state
                                         ? "Select city..."
-                                        : "Select state first"
+                                        : "Select city (all states)"
                                 }
                                 emptyText="No city found."
                                 allowCreate={true}
-                                className={
-                                    !formData.state
-                                        ? "opacity-50 cursor-not-allowed"
-                                        : ""
-                                }
                             />
                         </div>
                         <div>
@@ -566,15 +584,10 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
                                 placeholder={
                                     formData.state
                                         ? "Select district..."
-                                        : "Select state first"
+                                        : "Select district (all states)"
                                 }
                                 emptyText="No district found."
                                 allowCreate={true}
-                                className={
-                                    !formData.state
-                                        ? "opacity-50 cursor-not-allowed"
-                                        : ""
-                                }
                             />
                         </div>
                     </div>
