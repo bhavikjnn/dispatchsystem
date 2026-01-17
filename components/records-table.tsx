@@ -159,7 +159,7 @@ export default function RecordsTable() {
                 if (currentFilters.itemSubcategory)
                     params.set(
                         "itemSubcategory",
-                        currentFilters.itemSubcategory
+                        currentFilters.itemSubcategory,
                     );
                 if (currentFilters.transporter)
                     params.set("transporter", currentFilters.transporter);
@@ -189,18 +189,18 @@ export default function RecordsTable() {
                         limit: 20,
                         total: 0,
                         totalPages: 0,
-                    }
+                    },
                 );
                 setVisibility(visibilityData.visibility.fields || {});
             } catch (err) {
                 setError(
-                    err instanceof Error ? err.message : "An error occurred"
+                    err instanceof Error ? err.message : "An error occurred",
                 );
             } finally {
                 setLoading(false);
             }
         },
-        [pagination.limit]
+        [pagination.limit],
     );
 
     useEffect(() => {
@@ -253,7 +253,7 @@ export default function RecordsTable() {
     };
 
     const handleFilterChange = (
-        e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+        e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
     ) => {
         const { name, value } = e.target;
         setFilters((prev) => ({ ...prev, [name]: value }));
@@ -266,8 +266,8 @@ export default function RecordsTable() {
         if (name === "country" && value) {
             fetch(
                 `/api/locations?type=states&country=${encodeURIComponent(
-                    value
-                )}`
+                    value,
+                )}`,
             )
                 .then((res) => res.json())
                 .then((data) => setStates(data.states || []))
@@ -279,13 +279,13 @@ export default function RecordsTable() {
                 Promise.all([
                     fetch(
                         `/api/locations?type=cities&state=${encodeURIComponent(
-                            value
-                        )}`
+                            value,
+                        )}`,
                     ).then((r) => r.json()),
                     fetch(
                         `/api/locations?type=districts&state=${encodeURIComponent(
-                            value
-                        )}`
+                            value,
+                        )}`,
                     ).then((r) => r.json()),
                 ])
                     .then(([citiesData, districtsData]) => {
@@ -293,7 +293,7 @@ export default function RecordsTable() {
                         setDistricts(districtsData.districts || []);
                     })
                     .catch((err) =>
-                        console.error("Failed to load cities/districts:", err)
+                        console.error("Failed to load cities/districts:", err),
                     );
             } else {
                 setCities(allCities);
@@ -303,12 +303,12 @@ export default function RecordsTable() {
 
         if (name === "itemCategory" && value) {
             fetch(
-                `/api/options?type=itemSubcategory_${encodeURIComponent(value)}`
+                `/api/options?type=itemSubcategory_${encodeURIComponent(value)}`,
             )
                 .then((res) => res.json())
                 .then((data) => setItemSubcategories(data.options || []))
                 .catch((err) =>
-                    console.error("Failed to load subcategories:", err)
+                    console.error("Failed to load subcategories:", err),
                 );
         }
     };
@@ -336,11 +336,11 @@ export default function RecordsTable() {
     };
 
     const activeFilterCount = Object.values(appliedFilters).filter(
-        (v) => v !== ""
+        (v) => v !== "",
     ).length;
 
     const visibleColumns = ALL_FIELDS.filter(
-        (field) => visibility[field] !== false
+        (field) => visibility[field] !== false,
     );
 
     // Render filter panel (always visible) - only show filters for visible fields
@@ -350,7 +350,7 @@ export default function RecordsTable() {
         // Generate year options (current year and past 20 years)
         const currentYear = new Date().getFullYear();
         const yearOptions = Array.from({ length: 21 }, (_, i) =>
-            (currentYear - i).toString()
+            (currentYear - i).toString(),
         );
 
         return (
@@ -382,7 +382,7 @@ export default function RecordsTable() {
                                         onChange={(value) =>
                                             handleComboboxFilterChange(
                                                 "itemCategory",
-                                                value
+                                                value,
                                             )
                                         }
                                         placeholder="Item category..."
@@ -396,7 +396,7 @@ export default function RecordsTable() {
                                         onChange={(value) =>
                                             handleComboboxFilterChange(
                                                 "itemSubcategory",
-                                                value
+                                                value,
                                             )
                                         }
                                         placeholder={
@@ -432,7 +432,7 @@ export default function RecordsTable() {
                                         onChange={(value) =>
                                             handleComboboxFilterChange(
                                                 "state",
-                                                value
+                                                value,
                                             )
                                         }
                                         placeholder={
@@ -455,7 +455,7 @@ export default function RecordsTable() {
                                         onChange={(value) =>
                                             handleComboboxFilterChange(
                                                 "district",
-                                                value
+                                                value,
                                             )
                                         }
                                         placeholder={
@@ -473,7 +473,7 @@ export default function RecordsTable() {
                                         onChange={(value) =>
                                             handleComboboxFilterChange(
                                                 "city",
-                                                value
+                                                value,
                                             )
                                         }
                                         placeholder={
@@ -491,7 +491,7 @@ export default function RecordsTable() {
                                         onChange={(value) =>
                                             handleComboboxFilterChange(
                                                 "country",
-                                                value
+                                                value,
                                             )
                                         }
                                         placeholder="Country..."
@@ -517,7 +517,7 @@ export default function RecordsTable() {
                                         onChange={(value) =>
                                             handleComboboxFilterChange(
                                                 "company",
-                                                value
+                                                value,
                                             )
                                         }
                                         placeholder="Company name..."
@@ -759,19 +759,20 @@ export default function RecordsTable() {
                                             >
                                                 {col === "invDate"
                                                     ? new Date(
-                                                          record[col]
+                                                          record[col],
                                                       ).toLocaleDateString()
                                                     : col === "amount"
-                                                    ? `₹${Number(
-                                                          record[col]
-                                                      ).toFixed(2)}`
-                                                    : col === "rate"
-                                                    ? `₹${Number(
-                                                          record[col]
-                                                      ).toFixed(2)}`
-                                                    : String(
-                                                          record[col] || "-"
-                                                      )}
+                                                      ? `₹${Number(
+                                                            record[col],
+                                                        ).toFixed(2)}`
+                                                      : col === "rate"
+                                                        ? `₹${Number(
+                                                              record[col],
+                                                          ).toFixed(2)}`
+                                                        : String(
+                                                              record[col] ||
+                                                                  "-",
+                                                          )}
                                             </td>
                                         ))}
                                     </tr>

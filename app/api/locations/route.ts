@@ -25,7 +25,7 @@ function setCache(key: string, data: any) {
 function requireApiKey() {
     if (!CSC_API_KEY || CSC_API_KEY === "your_api_key_here") {
         throw new Error(
-            "CSC_API_KEY not configured. Get your free API key from https://countrystatecity.in/"
+            "CSC_API_KEY not configured. Get your free API key from https://countrystatecity.in/",
         );
     }
 }
@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
                     headers: {
                         "X-CSCAPI-KEY": CSC_API_KEY,
                     },
-                }
+                },
             );
 
             if (!statesResponse.ok) {
@@ -123,9 +123,9 @@ export async function GET(request: NextRequest) {
                     new Set(
                         Object.values(STATE_CITIES).reduce<string[]>(
                             (acc, list) => acc.concat(list),
-                            []
-                        )
-                    )
+                            [],
+                        ),
+                    ),
                 ).sort();
 
                 return NextResponse.json({ cities: allCities });
@@ -153,7 +153,7 @@ export async function GET(request: NextRequest) {
                     headers: {
                         "X-CSCAPI-KEY": CSC_API_KEY,
                     },
-                }
+                },
             );
 
             if (!statesResponse.ok) {
@@ -174,7 +174,7 @@ export async function GET(request: NextRequest) {
                     headers: {
                         "X-CSCAPI-KEY": CSC_API_KEY,
                     },
-                }
+                },
             );
 
             if (!citiesResponse.ok) {
@@ -199,9 +199,9 @@ export async function GET(request: NextRequest) {
                     new Set(
                         Object.values(STATE_DISTRICTS).reduce<string[]>(
                             (acc, list) => acc.concat(list),
-                            []
-                        )
-                    )
+                            [],
+                        ),
+                    ),
                 ).sort();
 
                 return NextResponse.json({ districts: allDistricts });
@@ -221,7 +221,7 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json(
             { error: "Invalid request parameters" },
-            { status: 400 }
+            { status: 400 },
         );
     } catch (error) {
         console.error("Location API error:", error);
@@ -232,7 +232,7 @@ export async function GET(request: NextRequest) {
                         ? error.message
                         : "Failed to fetch location data",
             },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }

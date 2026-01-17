@@ -46,7 +46,7 @@ export default function AdminFilterPanel({ onFilter }: FilterPanelProps) {
 
         // Auto-load India states on mount
         fetch(
-            `/api/locations?type=states&country=${encodeURIComponent("India")}`
+            `/api/locations?type=states&country=${encodeURIComponent("India")}`,
         )
             .then((res) => res.json())
             .then((data) => setStates(data.states || []))
@@ -82,7 +82,7 @@ export default function AdminFilterPanel({ onFilter }: FilterPanelProps) {
     }, []);
 
     const handleChange = (
-        e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+        e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
     ) => {
         const { name, value } = e.target;
         setFilters((prev) => ({ ...prev, [name]: value }));
@@ -95,8 +95,8 @@ export default function AdminFilterPanel({ onFilter }: FilterPanelProps) {
         if (name === "country" && value) {
             fetch(
                 `/api/locations?type=states&country=${encodeURIComponent(
-                    value
-                )}`
+                    value,
+                )}`,
             )
                 .then((res) => res.json())
                 .then((data) => setStates(data.states || []))
@@ -108,13 +108,13 @@ export default function AdminFilterPanel({ onFilter }: FilterPanelProps) {
                 Promise.all([
                     fetch(
                         `/api/locations?type=cities&state=${encodeURIComponent(
-                            value
-                        )}`
+                            value,
+                        )}`,
                     ).then((r) => r.json()),
                     fetch(
                         `/api/locations?type=districts&state=${encodeURIComponent(
-                            value
-                        )}`
+                            value,
+                        )}`,
                     ).then((r) => r.json()),
                 ])
                     .then(([citiesData, districtsData]) => {
@@ -122,7 +122,7 @@ export default function AdminFilterPanel({ onFilter }: FilterPanelProps) {
                         setDistricts(districtsData.districts || []);
                     })
                     .catch((err) =>
-                        console.error("Failed to load cities/districts:", err)
+                        console.error("Failed to load cities/districts:", err),
                     );
             } else {
                 setCities(allCities);
@@ -132,12 +132,12 @@ export default function AdminFilterPanel({ onFilter }: FilterPanelProps) {
 
         if (name === "itemCategory" && value) {
             fetch(
-                `/api/options?type=itemSubcategory_${encodeURIComponent(value)}`
+                `/api/options?type=itemSubcategory_${encodeURIComponent(value)}`,
             )
                 .then((res) => res.json())
                 .then((data) => setItemSubcategories(data.options || []))
                 .catch((err) =>
-                    console.error("Failed to load subcategories:", err)
+                    console.error("Failed to load subcategories:", err),
                 );
         }
     };
@@ -167,7 +167,7 @@ export default function AdminFilterPanel({ onFilter }: FilterPanelProps) {
     };
 
     const activeFilterCount = Object.values(filters).filter(
-        (v) => v !== ""
+        (v) => v !== "",
     ).length;
 
     return (
@@ -212,7 +212,7 @@ export default function AdminFilterPanel({ onFilter }: FilterPanelProps) {
                                 onChange={(value) =>
                                     handleComboboxChange(
                                         "itemSubcategory",
-                                        value
+                                        value,
                                     )
                                 }
                                 placeholder={
@@ -356,7 +356,7 @@ export default function AdminFilterPanel({ onFilter }: FilterPanelProps) {
                             >
                                 <option value="">All Years</option>
                                 {Array.from({ length: 21 }, (_, i) =>
-                                    (new Date().getFullYear() - i).toString()
+                                    (new Date().getFullYear() - i).toString(),
                                 ).map((year) => (
                                     <option key={year} value={year}>
                                         {year}
