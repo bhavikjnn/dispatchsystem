@@ -13,15 +13,16 @@ interface FilterPanelProps {
 
 export default function AdminFilterPanel({ onFilter }: FilterPanelProps) {
     const [filters, setFilters] = useState({
-        company: "",
-        city: "",
-        district: "",
-        state: "",
-        country: "",
-        invoiceNo: "",
         itemCategory: "",
         itemSubcategory: "",
+        state: "",
+        district: "",
+        city: "",
+        country: "India",
+        company: "",
+        invoiceNo: "",
         transporter: "",
+        year: "",
         startDate: "",
         endDate: "",
     });
@@ -35,16 +36,24 @@ export default function AdminFilterPanel({ onFilter }: FilterPanelProps) {
     const [itemSubcategories, setItemSubcategories] = useState<string[]>([]);
 
     useEffect(() => {
-        // Load initial options
-        fetch("/api/options?type=company")
-            .then((res) => res.json())
-            .then((data) => setCompanies(data.options || []))
-            .catch((err) => console.error("Failed to load companies:", err));
-
+        // Load initial options and auto-load India states
         fetch("/api/locations?type=countries")
             .then((res) => res.json())
             .then((data) => setCountries(data.countries || []))
             .catch((err) => console.error("Failed to load countries:", err));
+
+        // Auto-load India states on mount
+        fetch(
+            `/api/locations?type=states&country=${encodeURIComponent("India")}`
+        )
+            .then((res) => res.json())
+            .then((data) => setStates(data.states || []))
+            .catch((err) => console.error("Failed to load states:", err));
+
+        fetch("/api/options?type=company")
+            .then((res) => res.json())
+            .then((data) => setCompanies(data.options || []))
+            .catch((err) => console.error("Failed to load companies:", err));
 
         fetch("/api/options?type=itemCategory")
             .then((res) => res.json())
@@ -114,15 +123,16 @@ export default function AdminFilterPanel({ onFilter }: FilterPanelProps) {
 
     const handleReset = () => {
         setFilters({
-            company: "",
-            city: "",
-            district: "",
-            state: "",
-            country: "",
-            invoiceNo: "",
             itemCategory: "",
             itemSubcategory: "",
+            state: "",
+            district: "",
+            city: "",
+            country: "India",
+            company: "",
+            invoiceNo: "",
             transporter: "",
+            year: "",
             startDate: "",
             endDate: "",
         });
@@ -150,196 +160,214 @@ export default function AdminFilterPanel({ onFilter }: FilterPanelProps) {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+            <div className="space-y-6 mb-6">
+                {/* Items Section */}
                 <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                        Company Name
-                    </label>
-                    <Combobox
-                        options={companies}
-                        value={filters.company}
-                        onChange={(value) =>
-                            handleComboboxChange("company", value)
-                        }
-                        placeholder="Company name..."
-                        allowCreate={false}
-                    />
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                        Items
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <Combobox
+                                options={itemCategories}
+                                value={filters.itemCategory}
+                                onChange={(value) =>
+                                    handleComboboxChange("itemCategory", value)
+                                }
+                                placeholder="Item category..."
+                                allowCreate={false}
+                            />
+                        </div>
+                        <div>
+                            <Combobox
+                                options={itemSubcategories}
+                                value={filters.itemSubcategory}
+                                onChange={(value) =>
+                                    handleComboboxChange(
+                                        "itemSubcategory",
+                                        value
+                                    )
+                                }
+                                placeholder={
+                                    filters.itemCategory
+                                        ? "Item subcategory..."
+                                        : "Select category first"
+                                }
+                                allowCreate={false}
+                                className={
+                                    !filters.itemCategory
+                                        ? "opacity-50 cursor-not-allowed"
+                                        : ""
+                                }
+                            />
+                        </div>
+                    </div>
                 </div>
 
+                {/* Location Section */}
                 <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                        Invoice Number
-                    </label>
-                    <Input
-                        type="text"
-                        name="invoiceNo"
-                        placeholder="Invoice number..."
-                        value={filters.invoiceNo}
-                        onChange={handleChange}
-                        className="w-full"
-                    />
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                        Location
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <Combobox
+                                options={states}
+                                value={filters.state}
+                                onChange={(value) =>
+                                    handleComboboxChange("state", value)
+                                }
+                                placeholder={
+                                    filters.country
+                                        ? "State..."
+                                        : "Select country first"
+                                }
+                                allowCreate={false}
+                                className={
+                                    !filters.country
+                                        ? "opacity-50 cursor-not-allowed"
+                                        : ""
+                                }
+                            />
+                        </div>
+                        <div>
+                            <Combobox
+                                options={districts}
+                                value={filters.district}
+                                onChange={(value) =>
+                                    handleComboboxChange("district", value)
+                                }
+                                placeholder={
+                                    filters.state
+                                        ? "District..."
+                                        : "Select state first"
+                                }
+                                allowCreate={false}
+                                className={
+                                    !filters.state
+                                        ? "opacity-50 cursor-not-allowed"
+                                        : ""
+                                }
+                            />
+                        </div>
+                        <div>
+                            <Combobox
+                                options={cities}
+                                value={filters.city}
+                                onChange={(value) =>
+                                    handleComboboxChange("city", value)
+                                }
+                                placeholder={
+                                    filters.state
+                                        ? "City..."
+                                        : "Select state first"
+                                }
+                                allowCreate={false}
+                                className={
+                                    !filters.state
+                                        ? "opacity-50 cursor-not-allowed"
+                                        : ""
+                                }
+                            />
+                        </div>
+                        <div>
+                            <Combobox
+                                options={countries}
+                                value={filters.country}
+                                onChange={(value) =>
+                                    handleComboboxChange("country", value)
+                                }
+                                placeholder="Country..."
+                                allowCreate={false}
+                            />
+                        </div>
+                    </div>
                 </div>
 
+                {/* Company & Invoice Section */}
                 <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                        Country
-                    </label>
-                    <Combobox
-                        options={countries}
-                        value={filters.country}
-                        onChange={(value) =>
-                            handleComboboxChange("country", value)
-                        }
-                        placeholder="Country..."
-                        allowCreate={false}
-                    />
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                        Company & Invoice
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <Combobox
+                                options={companies}
+                                value={filters.company}
+                                onChange={(value) =>
+                                    handleComboboxChange("company", value)
+                                }
+                                placeholder="Company name..."
+                                allowCreate={false}
+                            />
+                        </div>
+                        <div>
+                            <Input
+                                type="text"
+                                name="invoiceNo"
+                                placeholder="Invoice number..."
+                                value={filters.invoiceNo}
+                                onChange={handleChange}
+                                className="w-full"
+                            />
+                        </div>
+                    </div>
                 </div>
 
+                {/* Shipping & Date Section */}
                 <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                        State
-                    </label>
-                    <Combobox
-                        options={states}
-                        value={filters.state}
-                        onChange={(value) =>
-                            handleComboboxChange("state", value)
-                        }
-                        placeholder={
-                            filters.country
-                                ? "State..."
-                                : "Select country first"
-                        }
-                        allowCreate={false}
-                        className={
-                            !filters.country
-                                ? "opacity-50 cursor-not-allowed"
-                                : ""
-                        }
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                        City
-                    </label>
-                    <Combobox
-                        options={cities}
-                        value={filters.city}
-                        onChange={(value) =>
-                            handleComboboxChange("city", value)
-                        }
-                        placeholder={
-                            filters.state ? "City..." : "Select state first"
-                        }
-                        allowCreate={false}
-                        className={
-                            !filters.state
-                                ? "opacity-50 cursor-not-allowed"
-                                : ""
-                        }
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                        District
-                    </label>
-                    <Combobox
-                        options={districts}
-                        value={filters.district}
-                        onChange={(value) =>
-                            handleComboboxChange("district", value)
-                        }
-                        placeholder={
-                            filters.state ? "District..." : "Select state first"
-                        }
-                        allowCreate={false}
-                        className={
-                            !filters.state
-                                ? "opacity-50 cursor-not-allowed"
-                                : ""
-                        }
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                        Item Category
-                    </label>
-                    <Combobox
-                        options={itemCategories}
-                        value={filters.itemCategory}
-                        onChange={(value) =>
-                            handleComboboxChange("itemCategory", value)
-                        }
-                        placeholder="Item category..."
-                        allowCreate={false}
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                        Item Subcategory
-                    </label>
-                    <Combobox
-                        options={itemSubcategories}
-                        value={filters.itemSubcategory}
-                        onChange={(value) =>
-                            handleComboboxChange("itemSubcategory", value)
-                        }
-                        placeholder={
-                            filters.itemCategory
-                                ? "Item subcategory..."
-                                : "Select category first"
-                        }
-                        allowCreate={false}
-                        className={
-                            !filters.itemCategory
-                                ? "opacity-50 cursor-not-allowed"
-                                : ""
-                        }
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                        Transporter
-                    </label>
-                    <Input
-                        type="text"
-                        name="transporter"
-                        value={filters.transporter}
-                        onChange={handleChange}
-                        placeholder="Transporter..."
-                        className="w-full"
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                        Start Date
-                    </label>
-                    <Input
-                        type="date"
-                        name="startDate"
-                        value={filters.startDate}
-                        onChange={handleChange}
-                        className="w-full"
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                        End Date
-                    </label>
-                    <Input
-                        type="date"
-                        name="endDate"
-                        value={filters.endDate}
-                        onChange={handleChange}
-                        className="w-full"
-                    />
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                        Shipping & Date
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <Input
+                                type="text"
+                                name="transporter"
+                                value={filters.transporter}
+                                onChange={handleChange}
+                                placeholder="Transporter..."
+                                className="w-full"
+                            />
+                        </div>
+                        <div>
+                            <select
+                                name="year"
+                                value={filters.year}
+                                onChange={handleChange}
+                                className="w-full px-4 py-2 border border-border rounded-lg text-sm bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                            >
+                                <option value="">All Years</option>
+                                {Array.from({ length: 21 }, (_, i) =>
+                                    (new Date().getFullYear() - i).toString()
+                                ).map((year) => (
+                                    <option key={year} value={year}>
+                                        {year}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <Input
+                                type="date"
+                                name="startDate"
+                                value={filters.startDate}
+                                onChange={handleChange}
+                                placeholder="Start date..."
+                                className="w-full"
+                            />
+                        </div>
+                        <div>
+                            <Input
+                                type="date"
+                                name="endDate"
+                                value={filters.endDate}
+                                onChange={handleChange}
+                                placeholder="End date..."
+                                className="w-full"
+                            />
+                        </div>
+                    </div>
                 </div>
             </div>
 

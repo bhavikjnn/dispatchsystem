@@ -120,29 +120,53 @@ function parseDate(value: string): Date {
         }
     }
 
-    // Try DD/MM/YYYY format
+    // Try DD/MM/YYYY and MM/DD/YYYY formats
     if (value.includes("/")) {
         const parts = value.split("/");
         if (parts.length === 3) {
-            const day = Number.parseInt(parts[0], 10);
-            const month = Number.parseInt(parts[1], 10) - 1;
-            const year = Number.parseInt(parts[2], 10);
-            date = new Date(year, month, day);
-            if (!Number.isNaN(date.getTime())) {
-                return date;
+            const part0 = Number.parseInt(parts[0], 10);
+            const part1 = Number.parseInt(parts[1], 10);
+            const part2 = Number.parseInt(parts[2], 10);
+            
+            // Try DD/MM/YYYY first (more common internationally)
+            if (part0 <= 31 && part1 <= 12) {
+                date = new Date(part2, part1 - 1, part0);
+                if (!Number.isNaN(date.getTime())) {
+                    return date;
+                }
+            }
+            
+            // Try MM/DD/YYYY (US format)
+            if (part0 <= 12 && part1 <= 31) {
+                date = new Date(part2, part0 - 1, part1);
+                if (!Number.isNaN(date.getTime())) {
+                    return date;
+                }
             }
         }
     }
 
-    // Try DD-MM-YYYY format
+    // Try DD-MM-YYYY and MM-DD-YYYY formats
     if (value.includes("-") && value.split("-").length === 3) {
         const parts = value.split("-");
-        const day = Number.parseInt(parts[0], 10);
-        const month = Number.parseInt(parts[1], 10) - 1;
-        const year = Number.parseInt(parts[2], 10);
-        date = new Date(year, month, day);
-        if (!Number.isNaN(date.getTime())) {
-            return date;
+        const part0 = Number.parseInt(parts[0], 10);
+        const part1 = Number.parseInt(parts[1], 10);
+        const part2 = Number.parseInt(parts[2], 10);
+        
+        // Try DD-MM-YYYY first
+        if (part0 <= 31 && part1 <= 12) {
+            date = new Date(part2, part1 - 1, part0);
+            if (!Number.isNaN(date.getTime())) {
+                return date;
+            }
+        }
+        
+        // Try MM-DD-YYYY (US format)
+        if (part0 <= 12 && part1 <= 31) {
+            date = new Date(part2, part0 - 1, part1);
+            if (!Number.isNaN(date.getTime())) {
+                return date;
+            }
         }
     }
 

@@ -160,7 +160,7 @@ ABC Industries,Ms. Priya,+91 9876543210,priya@abcindustries.com,Email,India,Maha
                                     both work)
                                 </li>
                                 <li>
-                                    • Date format: YYYY-MM-DD (e.g., 2025-01-15)
+                                    • Date formats: YYYY-MM-DD, DD/MM/YYYY, MM/DD/YYYY, DD-MM-YYYY, MM-DD-YYYY, DD.MM.YYYY
                                 </li>
                                 <li>
                                     • Required: Company Name, Contact Person,

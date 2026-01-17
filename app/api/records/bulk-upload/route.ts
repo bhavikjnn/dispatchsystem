@@ -134,7 +134,7 @@ export async function POST(request: Request) {
                     city: values[7] || "",
                     district: values[8] || "",
                     invoiceNo: values[9] || "",
-                    invDate: new Date(values[10] || ""),
+                    invDate: parseDate(values[10] || ""),
                     itemDescription: values[11] || "",
                     rate: Number.parseFloat(values[12] || "0"),
                     qty: Number.parseInt(values[13] || "0", 10),
@@ -175,7 +175,7 @@ export async function POST(request: Request) {
                 if (Number.isNaN(record.invDate?.getTime())) {
                     results.failed++;
                     results.errors.push(
-                        `Row ${i + 2}: Invalid date format (use YYYY-MM-DD)`
+                        `Row ${i + 2}: Invalid date format`
                     );
                     continue;
                 }
@@ -204,6 +204,88 @@ export async function POST(request: Request) {
             { status: 500 }
         );
     }
+}
+
+// Helper function to parse flexible date formats
+function parseDate(value: string): Date {
+    if (!value || !value.trim()) {
+        return new Date();
+    }
+
+    value = value.trim();
+
+    // Try standard ISO format first (YYYY-MM-DD)
+    let date = new Date(value);
+    if (!Number.isNaN(date.getTime())) {
+        return date;
+    }
+
+    // Try DD.MM.YYYY format (European)
+    if (value.includes(".")) {
+        const parts = value.split(".");
+        if (parts.length === 3) {
+            const day = Number.parseInt(parts[0], 10);
+            const month = Number.parseInt(parts[1], 10) - 1;
+            const year = Number.parseInt(parts[2], 10);
+            date = new Date(year, month, day);
+            if (!Number.isNaN(date.getTime())) {
+                return date;
+            }
+        }
+    }
+
+    // Try DD/MM/YYYY and MM/DD/YYYY formats
+    if (value.includes("/")) {
+        const parts = value.split("/");
+        if (parts.length === 3) {
+            const part0 = Number.parseInt(parts[0], 10);
+            const part1 = Number.parseInt(parts[1], 10);
+            const part2 = Number.parseInt(parts[2], 10);
+            
+            // Try DD/MM/YYYY first
+            if (part0 <= 31 && part1 <= 12) {
+                date = new Date(part2, part1 - 1, part0);
+                if (!Number.isNaN(date.getTime())) {
+                    return date;
+                }
+            }
+            
+            // Try MM/DD/YYYY (US format)
+            if (part0 <= 12 && part1 <= 31) {
+                date = new Date(part2, part0 - 1, part1);
+                if (!Number.isNaN(date.getTime())) {
+                    return date;
+                }
+            }
+        }
+    }
+
+    // Try DD-MM-YYYY and MM-DD-YYYY formats
+    if (value.includes("-") && value.split("-").length === 3) {
+        const parts = value.split("-");
+        const part0 = Number.parseInt(parts[0], 10);
+        const part1 = Number.parseInt(parts[1], 10);
+        const part2 = Number.parseInt(parts[2], 10);
+        
+        // Try DD-MM-YYYY first
+        if (part0 <= 31 && part1 <= 12) {
+            date = new Date(part2, part1 - 1, part0);
+            if (!Number.isNaN(date.getTime())) {
+                return date;
+            }
+        }
+        
+        // Try MM-DD-YYYY (US format)
+        if (part0 <= 12 && part1 <= 31) {
+            date = new Date(part2, part0 - 1, part1);
+            if (!Number.isNaN(date.getTime())) {
+                return date;
+            }
+        }
+    }
+
+    // If all else fails, return current date
+    return new Date();
 }
 
 // Helper function to parse CSV line handling quoted values properly
