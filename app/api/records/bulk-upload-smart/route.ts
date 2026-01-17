@@ -127,7 +127,7 @@ function parseDate(value: string): Date {
             const part0 = Number.parseInt(parts[0], 10);
             const part1 = Number.parseInt(parts[1], 10);
             const part2 = Number.parseInt(parts[2], 10);
-            
+
             // Try DD/MM/YYYY first (more common internationally)
             if (part0 <= 31 && part1 <= 12) {
                 date = new Date(part2, part1 - 1, part0);
@@ -135,7 +135,7 @@ function parseDate(value: string): Date {
                     return date;
                 }
             }
-            
+
             // Try MM/DD/YYYY (US format)
             if (part0 <= 12 && part1 <= 31) {
                 date = new Date(part2, part0 - 1, part1);
@@ -152,7 +152,7 @@ function parseDate(value: string): Date {
         const part0 = Number.parseInt(parts[0], 10);
         const part1 = Number.parseInt(parts[1], 10);
         const part2 = Number.parseInt(parts[2], 10);
-        
+
         // Try DD-MM-YYYY first
         if (part0 <= 31 && part1 <= 12) {
             date = new Date(part2, part1 - 1, part0);
@@ -160,7 +160,7 @@ function parseDate(value: string): Date {
                 return date;
             }
         }
-        
+
         // Try MM-DD-YYYY (US format)
         if (part0 <= 12 && part1 <= 31) {
             date = new Date(part2, part0 - 1, part1);
