@@ -259,6 +259,12 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
             ...newItems[index],
             [field]: value,
         };
+
+        // Auto-calculate amount when rate or qty changes
+        if (field === "rate" || field === "qty") {
+            newItems[index].amount = newItems[index].rate * newItems[index].qty;
+        }
+
         setItems(newItems);
 
         // Load subcategories when category changes
@@ -770,17 +776,10 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
                                     <Input
                                         type="number"
                                         value={item.amount || ""}
-                                        onChange={(e) =>
-                                            handleItemChange(
-                                                index,
-                                                "amount",
-                                                Number.parseFloat(
-                                                    e.target.value
-                                                ) || 0
-                                            )
-                                        }
+                                        readOnly
+                                        disabled
                                         step="0.01"
-                                        className="w-full bg-input border border-border text-foreground input-focus rounded-lg px-4 py-2"
+                                        className="w-full bg-input border border-border text-foreground rounded-lg px-4 py-2 opacity-70 cursor-not-allowed"
                                         placeholder="0.00"
                                     />
                                 </div>
