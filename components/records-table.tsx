@@ -125,6 +125,8 @@ export default function RecordsTable() {
     const [states, setStates] = useState<string[]>([]);
     const [cities, setCities] = useState<string[]>([]);
     const [districts, setDistricts] = useState<string[]>([]);
+    const [allDistricts, setAllDistricts] = useState<string[]>([]);
+    const [allCities, setAllCities] = useState<string[]>([]);
     const [itemCategories, setItemCategories] = useState<string[]>([]);
     const [itemSubcategories, setItemSubcategories] = useState<string[]>([]);
 
@@ -215,6 +217,24 @@ export default function RecordsTable() {
             .then((data) => setCountries(data.countries || []))
             .catch((err) => console.error("Failed to load countries:", err));
 
+        fetch("/api/locations?type=cities")
+            .then((res) => res.json())
+            .then((data) => {
+                const cityList = data.cities || [];
+                setAllCities(cityList);
+                setCities(cityList);
+            })
+            .catch((err) => console.error("Failed to load cities:", err));
+
+        fetch("/api/locations?type=districts")
+            .then((res) => res.json())
+            .then((data) => {
+                const districtList = data.districts || [];
+                setAllDistricts(districtList);
+                setDistricts(districtList);
+            })
+            .catch((err) => console.error("Failed to load districts:", err));
+
         fetch("/api/options?type=itemCategory")
             .then((res) => res.json())
             .then((data) => setItemCategories(data.options || []))
@@ -254,26 +274,31 @@ export default function RecordsTable() {
                 .catch((err) => console.error("Failed to load states:", err));
         }
 
-        if (name === "state" && value) {
-            Promise.all([
-                fetch(
-                    `/api/locations?type=cities&state=${encodeURIComponent(
-                        value
-                    )}`
-                ).then((r) => r.json()),
-                fetch(
-                    `/api/locations?type=districts&state=${encodeURIComponent(
-                        value
-                    )}`
-                ).then((r) => r.json()),
-            ])
-                .then(([citiesData, districtsData]) => {
-                    setCities(citiesData.cities || []);
-                    setDistricts(districtsData.districts || []);
-                })
-                .catch((err) =>
-                    console.error("Failed to load cities/districts:", err)
-                );
+        if (name === "state") {
+            if (value) {
+                Promise.all([
+                    fetch(
+                        `/api/locations?type=cities&state=${encodeURIComponent(
+                            value
+                        )}`
+                    ).then((r) => r.json()),
+                    fetch(
+                        `/api/locations?type=districts&state=${encodeURIComponent(
+                            value
+                        )}`
+                    ).then((r) => r.json()),
+                ])
+                    .then(([citiesData, districtsData]) => {
+                        setCities(citiesData.cities || []);
+                        setDistricts(districtsData.districts || []);
+                    })
+                    .catch((err) =>
+                        console.error("Failed to load cities/districts:", err)
+                    );
+            } else {
+                setCities(allCities);
+                setDistricts(allDistricts);
+            }
         }
 
         if (name === "itemCategory" && value) {
@@ -305,6 +330,8 @@ export default function RecordsTable() {
         };
         setFilters(emptyFilters);
         setAppliedFilters(emptyFilters);
+        setCities(allCities);
+        setDistricts(allDistricts);
         fetchRecords(1, emptyFilters);
     };
 
@@ -434,14 +461,9 @@ export default function RecordsTable() {
                                         placeholder={
                                             filters.state
                                                 ? "District..."
-                                                : "Select state first"
+                                                : "District (all states)"
                                         }
                                         allowCreate={false}
-                                        className={
-                                            !filters.state
-                                                ? "opacity-50 cursor-not-allowed"
-                                                : ""
-                                        }
                                     />
                                 )}
                                 {isFieldVisible("city") && (
@@ -457,14 +479,9 @@ export default function RecordsTable() {
                                         placeholder={
                                             filters.state
                                                 ? "City..."
-                                                : "Select state first"
+                                                : "City (all states)"
                                         }
                                         allowCreate={false}
-                                        className={
-                                            !filters.state
-                                                ? "opacity-50 cursor-not-allowed"
-                                                : ""
-                                        }
                                     />
                                 )}
                                 {isFieldVisible("country") && (

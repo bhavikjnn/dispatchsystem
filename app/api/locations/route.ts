@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { STATE_CITIES, STATE_DISTRICTS } from "@/lib/location-data";
 
 // Using Country State City API - Free tier: 100 requests/day
 // Get your API key from: https://countrystatecity.in/
@@ -21,24 +22,24 @@ function setCache(key: string, data: any) {
     cache.set(key, { data, timestamp: Date.now() });
 }
 
+function requireApiKey() {
+    if (!CSC_API_KEY || CSC_API_KEY === "your_api_key_here") {
+        throw new Error(
+            "CSC_API_KEY not configured. Get your free API key from https://countrystatecity.in/"
+        );
+    }
+}
+
 export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get("type");
     const country = searchParams.get("country");
     const state = searchParams.get("state");
 
-    if (!CSC_API_KEY || CSC_API_KEY === "your_api_key_here") {
-        return NextResponse.json(
-            {
-                error: "CSC_API_KEY not configured. Get your free API key from https://countrystatecity.in/",
-            },
-            { status: 500 }
-        );
-    }
-
     try {
         // Get countries
         if (type === "countries") {
+            requireApiKey();
             const cacheKey = "countries";
             const cached = getCached(cacheKey);
             if (cached) {
@@ -64,6 +65,7 @@ export async function GET(request: NextRequest) {
 
         // Get states for a country
         if (type === "states" && country) {
+            requireApiKey();
             const cacheKey = `states-${country}`;
             const cached = getCached(cacheKey);
             if (cached) {
@@ -109,8 +111,32 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ states });
         }
 
-        // Get cities for a state
-        if (type === "cities" && state) {
+        // Get cities for a state or all cities when no state is selected
+        if (type === "cities") {
+            if (!state) {
+                // Return all Indian cities only. If a non-India country is explicitly requested, return empty for now.
+                if (country && country !== "India") {
+                    return NextResponse.json({ cities: [] });
+                }
+
+                const allCities = Array.from(
+                    new Set(
+                        Object.values(STATE_CITIES).reduce<string[]>(
+                            (acc, list) => acc.concat(list),
+                            []
+                        )
+                    )
+                ).sort();
+
+                return NextResponse.json({ cities: allCities });
+            }
+
+            const staticCities = STATE_CITIES[state];
+            if (staticCities && staticCities.length > 0) {
+                return NextResponse.json({ cities: staticCities });
+            }
+
+            requireApiKey();
             const cacheKey = `cities-${state}`;
             const cached = getCached(cacheKey);
             if (cached) {
@@ -162,18 +188,31 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ cities });
         }
 
-        // Get districts for a state (using cities as districts for now)
-        // Note: CSC API doesn't have district data, so we'll use cities
-        // For accurate district data, you'd need a different API or static data
-        if (type === "districts" && state) {
+        // Get districts for a state or all Indian districts when no state is selected
+        if (type === "districts") {
+            if (!state) {
+                if (country && country !== "India") {
+                    return NextResponse.json({ districts: [] });
+                }
+
+                const allDistricts = Array.from(
+                    new Set(
+                        Object.values(STATE_DISTRICTS).reduce<string[]>(
+                            (acc, list) => acc.concat(list),
+                            []
+                        )
+                    )
+                ).sort();
+
+                return NextResponse.json({ districts: allDistricts });
+            }
+
             const cacheKey = `districts-${state}`;
             const cached = getCached(cacheKey);
             if (cached) {
                 return NextResponse.json({ districts: cached });
             }
 
-            // For districts, we'll use a static mapping for Indian states
-            // This is more accurate than using cities
             const indianDistricts = await getIndianDistricts(state);
             setCache(cacheKey, indianDistricts);
 
