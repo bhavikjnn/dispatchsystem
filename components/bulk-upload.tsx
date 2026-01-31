@@ -101,9 +101,9 @@ export default function BulkUpload({ onSuccess }: BulkUploadProps) {
 
     const downloadTemplate = (format: "csv" | "excel") => {
         if (format === "csv") {
-            const csvContent = `Company Name,Contact Person,Contact Number,Email,Record Reference,Country,State,City,District,Invoice Number,Invoice Date (YYYY-MM-DD),Item Description,Rate,Quantity,Amount,Transporter Name,Payment Status (Paid/To Pay),Booking Type,Payment Details
-Paras Polymers,Mr. Neel,+91 7201877472,neel@paraspolymers.com,By Phone,India,Gujarat,Ahmedabad,Ahmedabad,INV-2025-001,2025-01-15,Plastic Granules,150.50,100,15050,DTDC Courier,Paid,Standard,100% Advance Received
-ABC Industries,Ms. Priya,+91 9876543210,priya@abcindustries.com,Email,India,Maharashtra,Mumbai,Mumbai,INV-2025-002,2025-01-16,Steel Rods,200.00,50,10000,Blue Dart,To Pay,Express,50% Advance 50% Against Delivery`;
+            const csvContent = `Company Name,Contact Person,Contact Number,Email,Record Reference,Country,State,City,District,Invoice Number,Invoice Date (YYYY-MM-DD),Item Category,Item Subcategory,Rate,Quantity,Amount,Transporter Name,Payment Status (Paid/To Pay),Booking Type,Payment Details
+Paras Polymers,Mr. Neel,+91 7201877472,neel@paraspolymers.com,By Phone,India,Gujarat,Ahmedabad,Ahmedabad,INV-2025-001,2025-01-15,Electronic Items,Mobile Phones,150.50,100,15050,DTDC Courier,Paid,Standard,100% Advance Received
+ABC Industries,Ms. Priya,+91 9876543210,priya@abcindustries.com,Email,India,Maharashtra,Mumbai,Mumbai,INV-2025-002,2025-01-16,Furniture,Office Chairs,200.00,50,10000,Blue Dart,To Pay,Express,50% Advance 50% Against Delivery`;
 
             const blob = new Blob([csvContent], {
                 type: "text/csv;charset=utf-8;",

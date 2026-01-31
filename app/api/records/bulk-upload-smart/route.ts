@@ -26,7 +26,8 @@ const COLUMN_MAPPINGS: Record<string, string[]> = {
     country: ["country"],
     invoiceNo: ["invoice no", "inv no", "invoice number", "bill no"],
     invDate: ["inv date", "invoice date", "date", "bill date"],
-    itemDescription: ["item description", "description", "item", "product"],
+    itemCategory: ["item category", "category", "product category"],
+    itemSubcategory: ["item subcategory", "subcategory", "sub category", "sub-category"],
     rate: ["rate", "price", "unit price"],
     qty: ["qty", "quantity", "units"],
     amount: ["amount", "total", "value"],
@@ -287,9 +288,13 @@ export async function POST(request: Request) {
                 country: findColumnIndex(headers, COLUMN_MAPPINGS.country),
                 invoiceNo: findColumnIndex(headers, COLUMN_MAPPINGS.invoiceNo),
                 invDate: findColumnIndex(headers, COLUMN_MAPPINGS.invDate),
-                itemDescription: findColumnIndex(
+                itemCategory: findColumnIndex(
                     headers,
-                    COLUMN_MAPPINGS.itemDescription
+                    COLUMN_MAPPINGS.itemCategory
+                ),
+                itemSubcategory: findColumnIndex(
+                    headers,
+                    COLUMN_MAPPINGS.itemSubcategory
                 ),
                 rate: findColumnIndex(headers, COLUMN_MAPPINGS.rate),
                 qty: findColumnIndex(headers, COLUMN_MAPPINGS.qty),
@@ -343,9 +348,13 @@ export async function POST(request: Request) {
                         invDate: parseDate(
                             extractValue(row, columnMap.invDate)
                         ),
-                        itemDescription: extractValue(
+                        itemCategory: extractValue(
                             row,
-                            columnMap.itemDescription
+                            columnMap.itemCategory
+                        ),
+                        itemSubcategory: extractValue(
+                            row,
+                            columnMap.itemSubcategory
                         ),
                         rate: parseAmount(extractValue(row, columnMap.rate)),
                         qty: Number.parseInt(

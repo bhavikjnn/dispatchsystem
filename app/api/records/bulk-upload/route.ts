@@ -84,7 +84,7 @@ export async function POST(request: Request) {
         }
 
         const headers = rows[0].map((h) => h?.toString().trim() || "");
-        const expectedColumnCount = 19;
+        const expectedColumnCount = 20;
 
         if (headers.length < expectedColumnCount) {
             return NextResponse.json(
@@ -135,14 +135,15 @@ export async function POST(request: Request) {
                     district: values[8] || "",
                     invoiceNo: values[9] || "",
                     invDate: parseDate(values[10] || ""),
-                    itemDescription: values[11] || "",
-                    rate: Number.parseFloat(values[12] || "0"),
-                    qty: Number.parseInt(values[13] || "0", 10),
-                    amount: Number.parseFloat(values[14] || "0"),
-                    transporterName: values[15] || "",
-                    paidOrToPay: (values[16] || "Paid") as "Paid" | "To Pay",
-                    bookingType: values[17] || "Standard",
-                    paymentDetails: values[18] || "",
+                    itemCategory: values[11] || "",
+                    itemSubcategory: values[12] || "",
+                    rate: Number.parseFloat(values[13] || "0"),
+                    qty: Number.parseInt(values[14] || "0", 10),
+                    amount: Number.parseFloat(values[15] || "0"),
+                    transporterName: values[16] || "",
+                    paidOrToPay: (values[17] || "Paid") as "Paid" | "To Pay",
+                    bookingType: values[18] || "Standard",
+                    paymentDetails: values[19] || "",
                     createdBy: user.userId,
                     createdAt: new Date(),
                     updatedAt: new Date(),
