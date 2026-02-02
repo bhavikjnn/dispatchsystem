@@ -69,7 +69,17 @@ export default function BulkUpload({ onSuccess }: BulkUploadProps) {
             const response = await fetch(endpoint, {
                 method: "POST",
                 body: formData,
+                // Increase timeout for large files
+                signal: AbortSignal.timeout(120000), // 2 minutes
             });
+
+            // Check if the response is JSON
+            const contentType = response.headers.get("content-type");
+            if (!contentType || !contentType.includes("application/json")) {
+                throw new Error(
+                    "Server error: Request timed out or returned invalid response. Try uploading a smaller file or contact support."
+                );
+            }
 
             const data = await response.json();
 
@@ -93,7 +103,17 @@ export default function BulkUpload({ onSuccess }: BulkUploadProps) {
                 setUploadResult(null);
             }, timeout);
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Upload failed");
+            if (err instanceof Error) {
+                if (err.name === "TimeoutError" || err.message.includes("timeout")) {
+                    setError(
+                        "Upload timed out. Please try uploading a smaller file or split your data into multiple files."
+                    );
+                } else {
+                    setError(err.message);
+                }
+            } else {
+                setError("Upload failed");
+            }
         } finally {
             setLoading(false);
         }

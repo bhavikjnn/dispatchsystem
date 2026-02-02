@@ -4,6 +4,10 @@ import clientPromise from "@/lib/mongodb";
 import type { Record } from "@/lib/db-utils";
 import * as XLSX from "xlsx";
 
+// Increase route timeout for large file uploads
+export const maxDuration = 60; // 60 seconds for serverless functions
+export const dynamic = 'force-dynamic';
+
 // Column mapping - maps your Excel headers to system fields
 const COLUMN_MAPPINGS: Record<string, string[]> = {
     companyName: ["company name", "campany name", "company", "firm name"],
@@ -317,8 +321,10 @@ export async function POST(request: Request) {
                 ),
             };
 
-            // Process each row in batches
-            const BATCH_SIZE = 100;
+            // Process each row in batches for better performance
+            const BATCH_SIZE = 500;
+            const recordsToInsert: Partial<Record>[] = [];
+
             for (let i = 0; i < dataRows.length; i++) {
                 try {
                     const row = dataRows[i];
@@ -432,8 +438,14 @@ export async function POST(request: Request) {
                         continue;
                     }
 
-                    await db.collection("records").insertOne(record);
-                    results.success++;
+                    recordsToInsert.push(record);
+
+                    // Insert in batches
+                    if (recordsToInsert.length >= BATCH_SIZE) {
+                        await db.collection("records").insertMany(recordsToInsert);
+                        results.success += recordsToInsert.length;
+                        recordsToInsert.length = 0; // Clear array
+                    }
                 } catch (error) {
                     results.failed++;
                     const errorMessage =
@@ -444,6 +456,12 @@ export async function POST(request: Request) {
                         `Sheet "${sheetName}", Row ${i + 2}: ${errorMessage}`
                     );
                 }
+            }
+
+            // Insert remaining records
+            if (recordsToInsert.length > 0) {
+                await db.collection("records").insertMany(recordsToInsert);
+                results.success += recordsToInsert.length;
             }
         }
 
