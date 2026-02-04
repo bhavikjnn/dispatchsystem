@@ -94,6 +94,68 @@ export async function POST(request: NextRequest) {
             }
         }
 
+        // Handle unique company name filter
+        if (filters.uniqueCompanyOnly) {
+            const pipeline: any[] = [
+                { $match: query },
+                { $sort: { createdAt: -1 } },
+                {
+                    $group: {
+                        _id: "$companyName",
+                        doc: { $first: "$$ROOT" },
+                    },
+                },
+                { $replaceRoot: { newRoot: "$doc" } },
+                { $sort: { createdAt: -1 } },
+            ];
+
+            let records;
+            if (all) {
+                // For downloads - get all unique company records
+                records = await db
+                    .collection("records")
+                    .aggregate(pipeline)
+                    .toArray();
+            } else {
+                // Get paginated unique company records
+                const paginatedPipeline = [
+                    ...pipeline,
+                    { $skip: (page - 1) * limit },
+                    { $limit: limit },
+                ];
+                records = await db
+                    .collection("records")
+                    .aggregate(paginatedPipeline)
+                    .toArray();
+            }
+
+            // Get total count of unique companies
+            const countPipeline = [
+                { $match: query },
+                {
+                    $group: {
+                        _id: "$companyName",
+                    },
+                },
+                { $count: "total" },
+            ];
+            const countResult = await db
+                .collection("records")
+                .aggregate(countPipeline)
+                .toArray();
+            const total = countResult.length > 0 ? countResult[0].total : 0;
+
+            return NextResponse.json({
+                records,
+                pagination: {
+                    page,
+                    limit,
+                    total,
+                    totalPages: Math.ceil(total / limit),
+                },
+            });
+        }
+
         // Get total count
         const total = await db.collection("records").countDocuments(query);
 

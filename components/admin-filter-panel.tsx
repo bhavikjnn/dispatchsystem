@@ -25,6 +25,7 @@ export default function AdminFilterPanel({ onFilter }: FilterPanelProps) {
         year: "",
         startDate: "",
         endDate: "",
+        uniqueCompanyOnly: false,
     });
 
     const [companies, setCompanies] = useState<string[]>([]);
@@ -160,6 +161,7 @@ export default function AdminFilterPanel({ onFilter }: FilterPanelProps) {
             year: "",
             startDate: "",
             endDate: "",
+            uniqueCompanyOnly: false,
         });
         setCities(allCities);
         setDistricts(allDistricts);
@@ -328,6 +330,26 @@ export default function AdminFilterPanel({ onFilter }: FilterPanelProps) {
                                 className="w-full"
                             />
                         </div>
+                    </div>
+                    <div className="mt-3 flex items-center gap-2">
+                        <input
+                            type="checkbox"
+                            id="uniqueCompanyOnly"
+                            checked={filters.uniqueCompanyOnly}
+                            onChange={(e) =>
+                                setFilters((prev) => ({
+                                    ...prev,
+                                    uniqueCompanyOnly: e.target.checked,
+                                }))
+                            }
+                            className="w-4 h-4 text-primary bg-input border-border rounded focus:ring-primary focus:ring-2"
+                        />
+                        <label
+                            htmlFor="uniqueCompanyOnly"
+                            className="text-sm text-foreground cursor-pointer select-none"
+                        >
+                            Show only unique company names
+                        </label>
                     </div>
                 </div>
 
