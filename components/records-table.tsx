@@ -217,6 +217,14 @@ export default function RecordsTable() {
             .then((data) => setCountries(data.countries || []))
             .catch((err) => console.error("Failed to load countries:", err));
 
+        // Auto-load India states on mount
+        fetch(
+            `/api/locations?type=states&country=${encodeURIComponent("India")}`,
+        )
+            .then((res) => res.json())
+            .then((data) => setStates(data.states || []))
+            .catch((err) => console.error("Failed to load states:", err));
+
         fetch("/api/locations?type=cities")
             .then((res) => res.json())
             .then((data) => {
