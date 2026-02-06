@@ -34,14 +34,14 @@ export function Combobox({
     }, [value]);
 
     const filteredOptions = options.filter((option) =>
-        option.toLowerCase().includes(inputValue.toLowerCase())
+        option.toLowerCase().includes(inputValue.toLowerCase()),
     );
 
     const showCreateOption =
         allowCreate &&
         inputValue &&
         !filteredOptions.some(
-            (option) => option.toLowerCase() === inputValue.toLowerCase()
+            (option) => option.toLowerCase() === inputValue.toLowerCase(),
         );
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -56,13 +56,13 @@ export function Combobox({
 
     const handleSelectOption = async (
         option: string,
-        isNew: boolean = false
+        isNew: boolean = false,
     ) => {
         isSelectingRef.current = true;
         setInputValue(option);
         onChange(option);
         setIsOpen(false);
-        
+
         // Small delay to ensure the state updates before blurring
         setTimeout(() => {
             inputRef.current?.blur();
@@ -130,7 +130,7 @@ export function Combobox({
                 placeholder={placeholder}
                 className={cn(
                     "w-full px-4 py-2 border border-border rounded-lg text-sm bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent",
-                    className
+                    className,
                 )}
             />
             {isOpen && (filteredOptions.length > 0 || showCreateOption) && (
@@ -147,7 +147,7 @@ export function Combobox({
                             }}
                             className={cn(
                                 "px-4 py-2 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground",
-                                option === value && "bg-accent/50"
+                                option === value && "bg-accent/50",
                             )}
                         >
                             {option}

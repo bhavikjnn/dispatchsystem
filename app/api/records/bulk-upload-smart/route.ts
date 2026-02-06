@@ -6,7 +6,7 @@ import * as XLSX from "xlsx";
 
 // Increase route timeout for large file uploads
 export const maxDuration = 60; // 60 seconds for serverless functions
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 // Column mapping - maps your Excel headers to system fields
 const COLUMN_MAPPINGS: Record<string, string[]> = {
@@ -31,7 +31,12 @@ const COLUMN_MAPPINGS: Record<string, string[]> = {
     invoiceNo: ["invoice no", "inv no", "invoice number", "bill no"],
     invDate: ["inv date", "invoice date", "date", "bill date"],
     itemCategory: ["item category", "category", "product category"],
-    itemSubcategory: ["item subcategory", "subcategory", "sub category", "sub-category"],
+    itemSubcategory: [
+        "item subcategory",
+        "subcategory",
+        "sub category",
+        "sub-category",
+    ],
     rate: ["rate", "price", "unit price"],
     qty: ["qty", "quantity", "units"],
     amount: ["amount", "total", "value"],
@@ -51,7 +56,7 @@ const COLUMN_MAPPINGS: Record<string, string[]> = {
 
 function findColumnIndex(headers: string[], fieldMappings: string[]): number {
     const normalizedHeaders = headers.map((h) =>
-        h?.toString().toLowerCase().trim()
+        h?.toString().toLowerCase().trim(),
     );
 
     for (const mapping of fieldMappings) {
@@ -185,7 +190,7 @@ export async function POST(request: Request) {
         if (!user) {
             return NextResponse.json(
                 { error: "Unauthorized" },
-                { status: 401 }
+                { status: 401 },
             );
         }
 
@@ -195,7 +200,7 @@ export async function POST(request: Request) {
         if (!file) {
             return NextResponse.json(
                 { error: "No file provided" },
-                { status: 400 }
+                { status: 400 },
             );
         }
 
@@ -206,7 +211,7 @@ export async function POST(request: Request) {
                 {
                     error: "Please upload an Excel file (.xlsx or .xls)",
                 },
-                { status: 400 }
+                { status: 400 },
             );
         }
 
@@ -230,7 +235,7 @@ export async function POST(request: Request) {
             }) as string[][];
 
             const nonEmptyRows = data.filter((row) =>
-                row.some((cell) => cell && cell.toString().trim())
+                row.some((cell) => cell && cell.toString().trim()),
             );
 
             if (nonEmptyRows.length < 2) {
@@ -246,20 +251,20 @@ export async function POST(request: Request) {
             ];
 
             const normalizedHeaders = headers.map((h) =>
-                h?.toString().toLowerCase().trim()
+                h?.toString().toLowerCase().trim(),
             );
 
             const hasRequiredColumns = requiredColumns.every((variations) =>
                 normalizedHeaders.some((header) =>
-                    variations.some((variant) => header.includes(variant))
-                )
+                    variations.some((variant) => header.includes(variant)),
+                ),
             );
 
             if (!hasRequiredColumns) {
                 allValidationErrors.push(
                     `Skipped sheet "${sheetName}" - missing required columns. Found: ${headers
                         .slice(0, 5)
-                        .join(", ")}`
+                        .join(", ")}`,
                 );
                 continue;
             }
@@ -272,11 +277,11 @@ export async function POST(request: Request) {
             const columnMap = {
                 companyName: findColumnIndex(
                     headers,
-                    COLUMN_MAPPINGS.companyName
+                    COLUMN_MAPPINGS.companyName,
                 ),
                 contactPerson: findColumnIndex(
                     headers,
-                    COLUMN_MAPPINGS.contactPerson
+                    COLUMN_MAPPINGS.contactPerson,
                 ),
                 contactNo: findColumnIndex(headers, COLUMN_MAPPINGS.contactNo),
                 email: findColumnIndex(headers, COLUMN_MAPPINGS.email),
@@ -289,30 +294,30 @@ export async function POST(request: Request) {
                 invDate: findColumnIndex(headers, COLUMN_MAPPINGS.invDate),
                 itemCategory: findColumnIndex(
                     headers,
-                    COLUMN_MAPPINGS.itemCategory
+                    COLUMN_MAPPINGS.itemCategory,
                 ),
                 itemSubcategory: findColumnIndex(
                     headers,
-                    COLUMN_MAPPINGS.itemSubcategory
+                    COLUMN_MAPPINGS.itemSubcategory,
                 ),
                 rate: findColumnIndex(headers, COLUMN_MAPPINGS.rate),
                 qty: findColumnIndex(headers, COLUMN_MAPPINGS.qty),
                 amount: findColumnIndex(headers, COLUMN_MAPPINGS.amount),
                 transporterName: findColumnIndex(
                     headers,
-                    COLUMN_MAPPINGS.transporterName
+                    COLUMN_MAPPINGS.transporterName,
                 ),
                 paidOrToPay: findColumnIndex(
                     headers,
-                    COLUMN_MAPPINGS.paidOrToPay
+                    COLUMN_MAPPINGS.paidOrToPay,
                 ),
                 bookingType: findColumnIndex(
                     headers,
-                    COLUMN_MAPPINGS.bookingType
+                    COLUMN_MAPPINGS.bookingType,
                 ),
                 paymentDetails: findColumnIndex(
                     headers,
-                    COLUMN_MAPPINGS.paymentDetails
+                    COLUMN_MAPPINGS.paymentDetails,
                 ),
             };
 
@@ -330,7 +335,7 @@ export async function POST(request: Request) {
                         companyName: extractValue(row, columnMap.companyName),
                         contactPerson: extractValue(
                             row,
-                            columnMap.contactPerson
+                            columnMap.contactPerson,
                         ),
                         contactNo: extractValue(row, columnMap.contactNo),
                         email: extractValue(row, columnMap.email),
@@ -344,38 +349,35 @@ export async function POST(request: Request) {
                             extractValue(row, columnMap.country) || "India",
                         invoiceNo: extractValue(row, columnMap.invoiceNo),
                         invDate: parseDate(
-                            extractValue(row, columnMap.invDate)
+                            extractValue(row, columnMap.invDate),
                         ),
-                        itemCategory: extractValue(
-                            row,
-                            columnMap.itemCategory
-                        ),
+                        itemCategory: extractValue(row, columnMap.itemCategory),
                         itemSubcategory: extractValue(
                             row,
-                            columnMap.itemSubcategory
+                            columnMap.itemSubcategory,
                         ),
                         rate: parseAmount(extractValue(row, columnMap.rate)),
                         qty: Number.parseInt(
                             extractValue(row, columnMap.qty) || "0",
-                            10
+                            10,
                         ),
                         amount: parseAmount(
-                            extractValue(row, columnMap.amount)
+                            extractValue(row, columnMap.amount),
                         ),
                         transporterName: extractValue(
                             row,
-                            columnMap.transporterName
+                            columnMap.transporterName,
                         ),
                         paidOrToPay: (extractValue(
                             row,
-                            columnMap.paidOrToPay
+                            columnMap.paidOrToPay,
                         ) || "Paid") as "Paid" | "To Pay",
                         bookingType:
                             extractValue(row, columnMap.bookingType) ||
                             "Standard",
                         paymentDetails: extractValue(
                             row,
-                            columnMap.paymentDetails
+                            columnMap.paymentDetails,
                         ),
                         createdBy: user.userId,
                         createdAt: new Date(),
@@ -390,7 +392,7 @@ export async function POST(request: Request) {
                         allValidationErrors.push(
                             `Sheet "${sheetName}", Row ${
                                 i + 2
-                            }: Missing required fields: ${missing.join(", ")}`
+                            }: Missing required fields: ${missing.join(", ")}`,
                         );
                         continue;
                     }
@@ -403,7 +405,7 @@ export async function POST(request: Request) {
                         allValidationErrors.push(
                             `Sheet "${sheetName}", Row ${
                                 i + 2
-                            }: Invalid email format: "${record.email}"`
+                            }: Invalid email format: "${record.email}"`,
                         );
                         continue;
                     }
@@ -415,8 +417,8 @@ export async function POST(request: Request) {
                                 i + 2
                             }: Invalid date format: "${extractValue(
                                 row,
-                                columnMap.invDate
-                            )}" (use DD.MM.YYYY or YYYY-MM-DD)`
+                                columnMap.invDate,
+                            )}" (use DD.MM.YYYY or YYYY-MM-DD)`,
                         );
                         continue;
                     }
@@ -425,8 +427,10 @@ export async function POST(request: Request) {
                 } catch (error) {
                     allValidationErrors.push(
                         `Sheet "${sheetName}", Row ${i + 2}: ${
-                            error instanceof Error ? error.message : "Unknown error"
-                        }`
+                            error instanceof Error
+                                ? error.message
+                                : "Unknown error"
+                        }`,
                     );
                 }
             }
@@ -441,9 +445,9 @@ export async function POST(request: Request) {
                     failed: allValidationErrors.length,
                     errors: allValidationErrors,
                     sheetsProcessed: sheetsProcessed,
-                    message: `Found ${allValidationErrors.length} error(s) across all sheets. Please fix all errors and try again. The entire file was rejected.`
+                    message: `Found ${allValidationErrors.length} error(s) across all sheets. Please fix all errors and try again. The entire file was rejected.`,
                 },
-                { status: 400 }
+                { status: 400 },
             );
         }
 
@@ -458,7 +462,7 @@ export async function POST(request: Request) {
                 failed: 0,
                 errors: [],
                 sheetsProcessed: sheetsProcessed,
-                message: `Successfully uploaded ${allValidRecords.length} record(s) from ${sheetsProcessed.length} sheet(s)`
+                message: `Successfully uploaded ${allValidRecords.length} record(s) from ${sheetsProcessed.length} sheet(s)`,
             });
         } catch (error) {
             return NextResponse.json(
@@ -466,10 +470,14 @@ export async function POST(request: Request) {
                     error: "Database insertion failed. No records were uploaded.",
                     success: 0,
                     failed: allValidRecords.length,
-                    errors: [error instanceof Error ? error.message : "Unknown database error"],
+                    errors: [
+                        error instanceof Error
+                            ? error.message
+                            : "Unknown database error",
+                    ],
                     sheetsProcessed: sheetsProcessed,
                 },
-                { status: 500 }
+                { status: 500 },
             );
         }
     } catch (error) {
@@ -480,7 +488,7 @@ export async function POST(request: Request) {
                 details:
                     error instanceof Error ? error.message : "Unknown error",
             },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }

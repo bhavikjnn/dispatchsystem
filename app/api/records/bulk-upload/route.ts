@@ -10,7 +10,7 @@ export async function POST(request: Request) {
         if (!user) {
             return NextResponse.json(
                 { error: "Unauthorized" },
-                { status: 401 }
+                { status: 401 },
             );
         }
 
@@ -20,7 +20,7 @@ export async function POST(request: Request) {
         if (!file) {
             return NextResponse.json(
                 { error: "No file provided" },
-                { status: 400 }
+                { status: 400 },
             );
         }
 
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
                     {
                         error: "File must contain header and at least one data row",
                     },
-                    { status: 400 }
+                    { status: 400 },
                 );
             }
 
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
 
             // Filter out empty rows
             rows = data.filter((row) =>
-                row.some((cell) => cell && cell.toString().trim())
+                row.some((cell) => cell && cell.toString().trim()),
             );
 
             if (rows.length < 2) {
@@ -71,7 +71,7 @@ export async function POST(request: Request) {
                     {
                         error: `Sheet "${firstSheetName}" must contain header and at least one data row`,
                     },
-                    { status: 400 }
+                    { status: 400 },
                 );
             }
         } else {
@@ -79,7 +79,7 @@ export async function POST(request: Request) {
                 {
                     error: "Unsupported file format. Please use CSV, XLSX, or XLS",
                 },
-                { status: 400 }
+                { status: 400 },
             );
         }
 
@@ -93,12 +93,12 @@ export async function POST(request: Request) {
                     headers: headers,
                     hint: "Make sure you're using the first sheet and haven't modified the column headers",
                 },
-                { status: 400 }
+                { status: 400 },
             );
         }
 
         const dataRows = rows.slice(1);
-        
+
         // First pass: Validate ALL records before inserting any
         const validationErrors: string[] = [];
         const validRecords: Partial<Record>[] = [];
@@ -151,20 +151,27 @@ export async function POST(request: Request) {
                     if (!record.companyName) missing.push("Company Name");
                     if (!record.itemCategory) missing.push("Item Category");
                     validationErrors.push(
-                        `Row ${i + 2}: Missing required fields: ${missing.join(", ")}`
+                        `Row ${i + 2}: Missing required fields: ${missing.join(", ")}`,
                     );
                     continue;
                 }
 
                 // Validate email only if provided
-                if (record.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(record.email)) {
-                    validationErrors.push(`Row ${i + 2}: Invalid email format: "${record.email}"`);
+                if (
+                    record.email &&
+                    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(record.email)
+                ) {
+                    validationErrors.push(
+                        `Row ${i + 2}: Invalid email format: "${record.email}"`,
+                    );
                     continue;
                 }
 
                 // Validate date
                 if (Number.isNaN(record.invDate?.getTime())) {
-                    validationErrors.push(`Row ${i + 2}: Invalid date format: "${values[10]}"`);
+                    validationErrors.push(
+                        `Row ${i + 2}: Invalid date format: "${values[10]}"`,
+                    );
                     continue;
                 }
 
@@ -173,7 +180,7 @@ export async function POST(request: Request) {
                 validationErrors.push(
                     `Row ${i + 2}: ${
                         error instanceof Error ? error.message : "Unknown error"
-                    }`
+                    }`,
                 );
             }
         }
@@ -186,9 +193,9 @@ export async function POST(request: Request) {
                     success: 0,
                     failed: validationErrors.length,
                     errors: validationErrors,
-                    message: `Found ${validationErrors.length} error(s). Please fix all errors and try again.`
+                    message: `Found ${validationErrors.length} error(s). Please fix all errors and try again.`,
                 },
-                { status: 400 }
+                { status: 400 },
             );
         }
 
@@ -205,7 +212,7 @@ export async function POST(request: Request) {
                 success: validRecords.length,
                 failed: 0,
                 errors: [],
-                message: `Successfully uploaded ${validRecords.length} record(s)`
+                message: `Successfully uploaded ${validRecords.length} record(s)`,
             });
         } catch (error) {
             return NextResponse.json(
@@ -213,9 +220,13 @@ export async function POST(request: Request) {
                     error: "Database insertion failed. No records were uploaded.",
                     success: 0,
                     failed: validRecords.length,
-                    errors: [error instanceof Error ? error.message : "Unknown database error"],
+                    errors: [
+                        error instanceof Error
+                            ? error.message
+                            : "Unknown database error",
+                    ],
                 },
-                { status: 500 }
+                { status: 500 },
             );
         }
     } catch (error) {
@@ -226,7 +237,7 @@ export async function POST(request: Request) {
                 details:
                     error instanceof Error ? error.message : "Unknown error",
             },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }
