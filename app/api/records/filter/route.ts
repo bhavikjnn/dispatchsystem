@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
         if (!user || user.role !== "admin") {
             return NextResponse.json(
                 { error: "Unauthorized" },
-                { status: 401 }
+                { status: 401 },
             );
         }
 
@@ -192,7 +192,7 @@ export async function POST(request: NextRequest) {
         console.error("Filter error:", error);
         return NextResponse.json(
             { error: "Failed to filter records" },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }

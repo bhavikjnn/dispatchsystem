@@ -27,6 +27,7 @@ export function Combobox({
     const [inputValue, setInputValue] = useState(value);
     const inputRef = useRef<HTMLInputElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const isSelectingRef = useRef(false);
 
     useEffect(() => {
         setInputValue(value);
@@ -46,7 +47,10 @@ export function Combobox({
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newValue = e.target.value;
         setInputValue(newValue);
-        onChange(newValue);
+        // Only call onChange if allowCreate is true (for editable fields)
+        if (allowCreate) {
+            onChange(newValue);
+        }
         setIsOpen(true);
     };
 
@@ -54,10 +58,16 @@ export function Combobox({
         option: string,
         isNew: boolean = false
     ) => {
+        isSelectingRef.current = true;
         setInputValue(option);
         onChange(option);
         setIsOpen(false);
-        inputRef.current?.blur();
+        
+        // Small delay to ensure the state updates before blurring
+        setTimeout(() => {
+            inputRef.current?.blur();
+            isSelectingRef.current = false;
+        }, 0);
 
         // Save new option to MongoDB
         if (isNew && optionType) {
@@ -78,10 +88,15 @@ export function Combobox({
     };
 
     const handleInputBlur = () => {
-        // Delay to allow click on dropdown item
-        setTimeout(() => {
-            setIsOpen(false);
-        }, 200);
+        // Only close if not currently selecting an option
+        if (!isSelectingRef.current) {
+            // Increased delay to ensure click event completes
+            setTimeout(() => {
+                if (!isSelectingRef.current) {
+                    setIsOpen(false);
+                }
+            }, 300);
+        }
     };
 
     // Close dropdown when clicking outside
@@ -126,7 +141,10 @@ export function Combobox({
                     {filteredOptions.map((option, index) => (
                         <div
                             key={index}
-                            onClick={() => handleSelectOption(option)}
+                            onMouseDown={(e) => {
+                                e.preventDefault();
+                                handleSelectOption(option);
+                            }}
                             className={cn(
                                 "px-4 py-2 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground",
                                 option === value && "bg-accent/50"
@@ -137,7 +155,10 @@ export function Combobox({
                     ))}
                     {showCreateOption && (
                         <div
-                            onClick={() => handleSelectOption(inputValue, true)}
+                            onMouseDown={(e) => {
+                                e.preventDefault();
+                                handleSelectOption(inputValue, true);
+                            }}
                             className="px-4 py-2 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground border-t border-border text-primary"
                         >
                             Create "{inputValue}"

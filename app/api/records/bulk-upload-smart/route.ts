@@ -216,14 +216,11 @@ export async function POST(request: Request) {
         const client = await clientPromise;
         const db = client.db("order-dispatch");
 
-        const results = {
-            success: 0,
-            failed: 0,
-            errors: [] as string[],
-            sheetsProcessed: [] as string[],
-        };
+        const allValidationErrors: string[] = [];
+        const allValidRecords: Partial<Record>[] = [];
+        const sheetsProcessed: string[] = [];
 
-        // Process ALL sheets
+        // FIRST PASS: Validate ALL sheets and collect ALL records
         for (const sheetName of workbook.SheetNames) {
             const worksheet = workbook.Sheets[sheetName];
             const data = XLSX.utils.sheet_to_json(worksheet, {
@@ -245,9 +242,7 @@ export async function POST(request: Request) {
             // Check if this sheet has the required columns
             const requiredColumns = [
                 ["company", "campany"], // Company Name or Campany Name
-                ["contact person", "person"], // Contact Person
-                ["email", "e-mail"], // Email
-                ["invoice", "inv"], // Invoice No
+                ["category", "item category"], // Item Category
             ];
 
             const normalizedHeaders = headers.map((h) =>
@@ -261,7 +256,7 @@ export async function POST(request: Request) {
             );
 
             if (!hasRequiredColumns) {
-                results.errors.push(
+                allValidationErrors.push(
                     `Skipped sheet "${sheetName}" - missing required columns. Found: ${headers
                         .slice(0, 5)
                         .join(", ")}`
@@ -269,7 +264,7 @@ export async function POST(request: Request) {
                 continue;
             }
 
-            results.sheetsProcessed.push(sheetName);
+            sheetsProcessed.push(sheetName);
 
             const dataRows = nonEmptyRows.slice(1);
 
@@ -321,10 +316,7 @@ export async function POST(request: Request) {
                 ),
             };
 
-            // Process each row in batches for better performance
-            const BATCH_SIZE = 500;
-            const recordsToInsert: Partial<Record>[] = [];
-
+            // First pass: Validate ALL records before inserting any
             for (let i = 0; i < dataRows.length; i++) {
                 try {
                     const row = dataRows[i];
@@ -390,22 +382,15 @@ export async function POST(request: Request) {
                         updatedAt: new Date(),
                     };
 
-                    // Validate required fields - only Company Name, Contact Person, and Invoice No
-                    if (
-                        !record.companyName ||
-                        !record.contactPerson ||
-                        !record.invoiceNo
-                    ) {
-                        results.failed++;
+                    // Validate required fields - ONLY Company Name and Item Category
+                    if (!record.companyName || !record.itemCategory) {
                         const missing = [];
                         if (!record.companyName) missing.push("Company Name");
-                        if (!record.contactPerson)
-                            missing.push("Contact Person");
-                        if (!record.invoiceNo) missing.push("Invoice Number");
-                        results.errors.push(
+                        if (!record.itemCategory) missing.push("Item Category");
+                        allValidationErrors.push(
                             `Sheet "${sheetName}", Row ${
                                 i + 2
-                            }: Missing ${missing.join(", ")}`
+                            }: Missing required fields: ${missing.join(", ")}`
                         );
                         continue;
                     }
@@ -415,8 +400,7 @@ export async function POST(request: Request) {
                         record.email &&
                         !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(record.email)
                     ) {
-                        results.failed++;
-                        results.errors.push(
+                        allValidationErrors.push(
                             `Sheet "${sheetName}", Row ${
                                 i + 2
                             }: Invalid email format: "${record.email}"`
@@ -424,10 +408,9 @@ export async function POST(request: Request) {
                         continue;
                     }
 
-                    // Validate date - should always be valid now with parseDate
+                    // Validate date
                     if (Number.isNaN(record.invDate?.getTime())) {
-                        results.failed++;
-                        results.errors.push(
+                        allValidationErrors.push(
                             `Sheet "${sheetName}", Row ${
                                 i + 2
                             }: Invalid date format: "${extractValue(
@@ -438,34 +421,57 @@ export async function POST(request: Request) {
                         continue;
                     }
 
-                    recordsToInsert.push(record);
-
-                    // Insert in batches
-                    if (recordsToInsert.length >= BATCH_SIZE) {
-                        await db.collection("records").insertMany(recordsToInsert);
-                        results.success += recordsToInsert.length;
-                        recordsToInsert.length = 0; // Clear array
-                    }
+                    allValidRecords.push(record);
                 } catch (error) {
-                    results.failed++;
-                    const errorMessage =
-                        error instanceof Error
-                            ? error.message
-                            : "Unknown error";
-                    results.errors.push(
-                        `Sheet "${sheetName}", Row ${i + 2}: ${errorMessage}`
+                    allValidationErrors.push(
+                        `Sheet "${sheetName}", Row ${i + 2}: ${
+                            error instanceof Error ? error.message : "Unknown error"
+                        }`
                     );
                 }
             }
-
-            // Insert remaining records
-            if (recordsToInsert.length > 0) {
-                await db.collection("records").insertMany(recordsToInsert);
-                results.success += recordsToInsert.length;
-            }
         }
 
-        return NextResponse.json(results);
+        // If there are ANY validation errors, reject the ENTIRE file
+        if (allValidationErrors.length > 0) {
+            return NextResponse.json(
+                {
+                    error: "Validation failed. No records were uploaded.",
+                    success: 0,
+                    failed: allValidationErrors.length,
+                    errors: allValidationErrors,
+                    sheetsProcessed: sheetsProcessed,
+                    message: `Found ${allValidationErrors.length} error(s) across all sheets. Please fix all errors and try again. The entire file was rejected.`
+                },
+                { status: 400 }
+            );
+        }
+
+        // SECOND PASS: All validations passed - now insert ALL records
+        try {
+            if (allValidRecords.length > 0) {
+                await db.collection("records").insertMany(allValidRecords);
+            }
+
+            return NextResponse.json({
+                success: allValidRecords.length,
+                failed: 0,
+                errors: [],
+                sheetsProcessed: sheetsProcessed,
+                message: `Successfully uploaded ${allValidRecords.length} record(s) from ${sheetsProcessed.length} sheet(s)`
+            });
+        } catch (error) {
+            return NextResponse.json(
+                {
+                    error: "Database insertion failed. No records were uploaded.",
+                    success: 0,
+                    failed: allValidRecords.length,
+                    errors: [error instanceof Error ? error.message : "Unknown database error"],
+                    sheetsProcessed: sheetsProcessed,
+                },
+                { status: 500 }
+            );
+        }
     } catch (error) {
         console.error("Smart bulk upload error:", error);
         return NextResponse.json(

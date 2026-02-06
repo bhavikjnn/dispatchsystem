@@ -98,14 +98,10 @@ export async function POST(request: Request) {
         }
 
         const dataRows = rows.slice(1);
-        const client = await clientPromise;
-        const db = client.db("order-dispatch");
-
-        const results = {
-            success: 0,
-            failed: 0,
-            errors: [] as string[],
-        };
+        
+        // First pass: Validate ALL records before inserting any
+        const validationErrors: string[] = [];
+        const validRecords: Partial<Record>[] = [];
 
         for (let i = 0; i < dataRows.length; i++) {
             try {
@@ -149,41 +145,32 @@ export async function POST(request: Request) {
                     updatedAt: new Date(),
                 };
 
-                // Validate required fields
-                if (
-                    !record.companyName ||
-                    !record.contactPerson ||
-                    !record.email ||
-                    !record.invoiceNo
-                ) {
-                    results.failed++;
-                    results.errors.push(
-                        `Row ${
-                            i + 2
-                        }: Missing required fields (Company Name, Contact Person, Email, or Invoice Number)`
+                // Validate required fields - ONLY Company Name and Item Category
+                if (!record.companyName || !record.itemCategory) {
+                    const missing = [];
+                    if (!record.companyName) missing.push("Company Name");
+                    if (!record.itemCategory) missing.push("Item Category");
+                    validationErrors.push(
+                        `Row ${i + 2}: Missing required fields: ${missing.join(", ")}`
                     );
                     continue;
                 }
 
-                // Validate email
-                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(record.email)) {
-                    results.failed++;
-                    results.errors.push(`Row ${i + 2}: Invalid email format`);
+                // Validate email only if provided
+                if (record.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(record.email)) {
+                    validationErrors.push(`Row ${i + 2}: Invalid email format: "${record.email}"`);
                     continue;
                 }
 
                 // Validate date
                 if (Number.isNaN(record.invDate?.getTime())) {
-                    results.failed++;
-                    results.errors.push(`Row ${i + 2}: Invalid date format`);
+                    validationErrors.push(`Row ${i + 2}: Invalid date format: "${values[10]}"`);
                     continue;
                 }
 
-                await db.collection("records").insertOne(record);
-                results.success++;
+                validRecords.push(record);
             } catch (error) {
-                results.failed++;
-                results.errors.push(
+                validationErrors.push(
                     `Row ${i + 2}: ${
                         error instanceof Error ? error.message : "Unknown error"
                     }`
@@ -191,7 +178,46 @@ export async function POST(request: Request) {
             }
         }
 
-        return NextResponse.json(results);
+        // If there are ANY validation errors, reject the entire upload
+        if (validationErrors.length > 0) {
+            return NextResponse.json(
+                {
+                    error: "Validation failed. No records were uploaded.",
+                    success: 0,
+                    failed: validationErrors.length,
+                    errors: validationErrors,
+                    message: `Found ${validationErrors.length} error(s). Please fix all errors and try again.`
+                },
+                { status: 400 }
+            );
+        }
+
+        // All records are valid - now insert them
+        const client = await clientPromise;
+        const db = client.db("order-dispatch");
+
+        try {
+            if (validRecords.length > 0) {
+                await db.collection("records").insertMany(validRecords);
+            }
+
+            return NextResponse.json({
+                success: validRecords.length,
+                failed: 0,
+                errors: [],
+                message: `Successfully uploaded ${validRecords.length} record(s)`
+            });
+        } catch (error) {
+            return NextResponse.json(
+                {
+                    error: "Database insertion failed. No records were uploaded.",
+                    success: 0,
+                    failed: validRecords.length,
+                    errors: [error instanceof Error ? error.message : "Unknown database error"],
+                },
+                { status: 500 }
+            );
+        }
     } catch (error) {
         console.error("Bulk upload error:", error);
         return NextResponse.json(
