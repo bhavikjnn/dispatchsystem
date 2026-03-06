@@ -84,10 +84,6 @@ export async function GET(request: NextRequest) {
 
         const query: any = {};
 
-        if (user.role === "employee") {
-            query.createdBy = user.userId;
-        }
-
         // Apply filters to query
         if (company) {
             query.companyName = { $regex: company, $options: "i" };
