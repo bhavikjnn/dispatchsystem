@@ -1,7 +1,16 @@
 "use client";
 
 import type React from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+
+function getInvoicePrefix(): string {
+    const now = new Date();
+    const month = now.getMonth(); // 0-indexed; April = 3
+    const year = now.getFullYear();
+    const fyStart = month >= 3 ? year : year - 1;
+    const fyEnd = fyStart + 1;
+    return `TM/${String(fyStart).slice(-2)}-${String(fyEnd).slice(-2)}/`;
+}
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -42,7 +51,7 @@ interface RecordFormData {
     invoiceNo: string;
     invDate: string;
     transporterName: string;
-    paidOrToPay: "Paid" | "To Pay";
+    paidOrToPay: "" | "Paid" | "To Pay";
     bookingType: string;
     paymentDetails: string;
 }
@@ -61,7 +70,7 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
         invoiceNo: "",
         invDate: "",
         transporterName: "",
-        paidOrToPay: "Paid",
+        paidOrToPay: "",
         bookingType: "Standard",
         paymentDetails: "",
     });
@@ -80,8 +89,11 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
     const [error, setError] = useState("");
     const [success, setSuccess] = useState(false);
 
+    const formRef = useRef<HTMLDivElement>(null);
+
     // Dependent dropdown options
     const [companies, setCompanies] = useState<string[]>([]);
+    const [transporters, setTransporters] = useState<string[]>([]);
     const [countries, setCountries] = useState<string[]>([]);
     const [itemCategories, setItemCategories] =
         useState<string[]>(ITEM_CATEGORY_LIST);
@@ -106,6 +118,11 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
                 setCompanies(data.options || []);
             })
             .catch((err) => console.error("Failed to load companies:", err));
+
+        fetch("/api/options?type=transporter")
+            .then((res) => res.json())
+            .then((data) => setTransporters(data.options || []))
+            .catch((err) => console.error("Failed to load transporters:", err));
 
         fetch("/api/locations?type=countries")
             .then((res) => res.json())
@@ -138,12 +155,12 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
                 console.log("[RecordForm] Received item categories:", data);
                 if (data.options && data.options.length > 0) {
                     console.log(
-                        `[RecordForm] Setting ${data.options.length} categories`
+                        `[RecordForm] Setting ${data.options.length} categories`,
                     );
                     setItemCategories(data.options);
                 } else {
                     console.log(
-                        "[RecordForm] No categories from API, using fallback"
+                        "[RecordForm] No categories from API, using fallback",
                     );
                 }
             })
@@ -157,8 +174,8 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
         if (formData.country) {
             fetch(
                 `/api/locations?type=states&country=${encodeURIComponent(
-                    formData.country
-                )}`
+                    formData.country,
+                )}`,
             )
                 .then((res) => res.json())
                 .then((data) => {
@@ -182,13 +199,13 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
             Promise.all([
                 fetch(
                     `/api/locations?type=cities&state=${encodeURIComponent(
-                        formData.state
-                    )}`
+                        formData.state,
+                    )}`,
                 ).then((r) => r.json()),
                 fetch(
                     `/api/locations?type=districts&state=${encodeURIComponent(
-                        formData.state
-                    )}`
+                        formData.state,
+                    )}`,
                 ).then((r) => r.json()),
             ])
                 .then(([citiesData, districtsData]) => {
@@ -201,7 +218,7 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
                     }));
                 })
                 .catch((err) =>
-                    console.error("Failed to load cities/districts:", err)
+                    console.error("Failed to load cities/districts:", err),
                 );
         } else {
             setAvailableCities(allCities);
@@ -214,8 +231,8 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
         if (category) {
             fetch(
                 `/api/options?type=itemSubcategory_${encodeURIComponent(
-                    category
-                )}`
+                    category,
+                )}`,
             )
                 .then((res) => res.json())
                 .then((data) => {
@@ -253,7 +270,7 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
     const handleChange = (
         e: React.ChangeEvent<
             HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-        >
+        >,
     ) => {
         const { name, value } = e.target;
         setFormData((prev) => ({
@@ -261,7 +278,9 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
             [name]:
                 name === "rate" || name === "qty" || name === "amount"
                     ? Number.parseFloat(value) || 0
-                    : value,
+                    : name === "recordRef"
+                      ? value.toUpperCase()
+                      : value,
         }));
     };
 
@@ -275,7 +294,7 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
     const handleItemChange = (
         index: number,
         field: keyof ItemData,
-        value: string | number
+        value: string | number,
     ) => {
         const newItems = [...items];
         newItems[index] = {
@@ -356,6 +375,7 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
             }
 
             setSuccess(true);
+            formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
             setFormData({
                 companyName: "",
                 contactPerson: "",
@@ -369,7 +389,7 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
                 invoiceNo: "",
                 invDate: "",
                 transporterName: "",
-                paidOrToPay: "Paid",
+                paidOrToPay: "",
                 bookingType: "Standard",
                 paymentDetails: "",
             });
@@ -395,7 +415,7 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
     };
 
     return (
-        <Card className="p-8 bg-card border border-border">
+        <Card ref={formRef} className="p-8 bg-card border border-border">
             {error && (
                 <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm flex items-start gap-3">
                     <svg
@@ -598,15 +618,22 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
                         <label className="block text-sm font-medium text-foreground mb-2">
                             Invoice Number *
                         </label>
-                        <Input
-                            type="text"
-                            name="invoiceNo"
-                            value={formData.invoiceNo}
-                            onChange={handleChange}
-                            required
-                            className="w-full bg-input border border-border text-foreground input-focus rounded-lg px-4 py-2"
-                            placeholder="e.g., INV-2025-001"
-                        />
+                        <div className="flex items-center">
+                            <span className="flex-shrink-0 bg-muted border border-border border-r-0 rounded-l-lg px-3 py-2 text-sm font-mono text-muted-foreground select-none">
+                                {getInvoicePrefix()}
+                            </span>
+                            <Input
+                                type="text"
+                                value={formData.invoiceNo.startsWith(getInvoicePrefix()) ? formData.invoiceNo.slice(getInvoicePrefix().length) : formData.invoiceNo}
+                                onChange={(e) => {
+                                    const num = e.target.value.replace(/\D/g, "");
+                                    setFormData((prev) => ({ ...prev, invoiceNo: getInvoicePrefix() + num }));
+                                }}
+                                required
+                                className="w-full bg-input border border-border text-foreground input-focus rounded-r-lg rounded-l-none px-4 py-2"
+                                placeholder="e.g., 2285"
+                            />
+                        </div>
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-foreground mb-2">
@@ -628,26 +655,7 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
                         <h3 className="text-lg font-semibold text-foreground">
                             Items
                         </h3>
-                        <Button
-                            type="button"
-                            onClick={addItem}
-                            className="button-secondary flex items-center gap-2"
-                        >
-                            <svg
-                                className="w-4 h-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M12 4v16m8-8H4"
-                                />
-                            </svg>
-                            Add Item
-                        </Button>
+                        
                     </div>
 
                     {items.map((item, index) => (
@@ -695,7 +703,7 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
                                             handleItemChange(
                                                 index,
                                                 "itemCategory",
-                                                value
+                                                value,
                                             )
                                         }
                                         placeholder="Select category..."
@@ -714,7 +722,7 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
                                             handleItemChange(
                                                 index,
                                                 "itemSubcategory",
-                                                value
+                                                value,
                                             )
                                         }
                                         placeholder={
@@ -750,8 +758,8 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
                                                 index,
                                                 "rate",
                                                 Number.parseFloat(
-                                                    e.target.value
-                                                ) || 0
+                                                    e.target.value,
+                                                ) || 0,
                                             )
                                         }
                                         step="0.01"
@@ -772,8 +780,8 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
                                                 "qty",
                                                 Number.parseInt(
                                                     e.target.value,
-                                                    10
-                                                ) || 0
+                                                    10,
+                                                ) || 0,
                                             )
                                         }
                                         required
@@ -799,6 +807,26 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
                             </div>
                         </div>
                     ))}
+                    <Button
+                            type="button"
+                            onClick={addItem}
+                            className="button-secondary flex items-center gap-2"
+                        >
+                            <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M12 4v16m8-8H4"
+                                />
+                            </svg>
+                            Add Item
+                        </Button>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -806,14 +834,15 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
                         <label className="block text-sm font-medium text-foreground mb-2">
                             Transporter Name *
                         </label>
-                        <Input
-                            type="text"
-                            name="transporterName"
+                        <Combobox
+                            options={transporters}
                             value={formData.transporterName}
-                            onChange={handleChange}
-                            required
-                            className="w-full bg-input border border-border text-foreground input-focus rounded-lg px-4 py-2"
-                            placeholder="e.g., DTDC Courier"
+                            onChange={(value) =>
+                                handleComboboxChange("transporterName", value)
+                            }
+                            placeholder="Select or create transporter..."
+                            allowCreate={true}
+                            optionType="transporter"
                         />
                     </div>
                     <div>
@@ -851,7 +880,7 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-foreground mb-2">
-                            Payment Details
+                            Payment mode
                         </label>
                         <Combobox
                             options={PAYMENT_DETAILS_OPTIONS}

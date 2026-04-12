@@ -86,6 +86,12 @@ export async function GET(request: NextRequest) {
                         .collection("records")
                         .distinct("companyName");
                     values = distinctCompanies.filter(Boolean).sort();
+                } else if (type === "transporter") {
+                    // Get transporters from records if not in options
+                    const distinctTransporters = await db
+                        .collection("records")
+                        .distinct("transporterName");
+                    values = distinctTransporters.filter(Boolean).sort();
                 }
             }
 

@@ -124,7 +124,7 @@ export async function POST(request: Request) {
                     contactPerson: values[1] || "",
                     contactNo: values[2] || "",
                     email: values[3] || "",
-                    recordRef: values[4] || "",
+                    recordRef: (values[4] || "").toUpperCase(),
                     country: values[5] || "",
                     state: values[6] || "",
                     city: values[7] || "",
@@ -206,6 +206,24 @@ export async function POST(request: Request) {
         try {
             if (validRecords.length > 0) {
                 await db.collection("records").insertMany(validRecords);
+
+                // Sync new company and transporter names to options collection
+                const newCompanies = [...new Set(validRecords.map((r) => r.companyName).filter(Boolean) as string[])];
+                if (newCompanies.length > 0) {
+                    await db.collection("options").updateOne(
+                        { type: "company" },
+                        { $addToSet: { values: { $each: newCompanies } }, $setOnInsert: { createdAt: new Date() }, $set: { updatedAt: new Date() } },
+                        { upsert: true }
+                    );
+                }
+                const newTransporters = [...new Set(validRecords.map((r) => r.transporterName).filter(Boolean) as string[])];
+                if (newTransporters.length > 0) {
+                    await db.collection("options").updateOne(
+                        { type: "transporter" },
+                        { $addToSet: { values: { $each: newTransporters } }, $setOnInsert: { createdAt: new Date() }, $set: { updatedAt: new Date() } },
+                        { upsert: true }
+                    );
+                }
             }
 
             return NextResponse.json({

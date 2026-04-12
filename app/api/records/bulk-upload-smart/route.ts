@@ -339,7 +339,7 @@ export async function POST(request: Request) {
                         ),
                         contactNo: extractValue(row, columnMap.contactNo),
                         email: extractValue(row, columnMap.email),
-                        recordRef: extractValue(row, columnMap.recordRef),
+                        recordRef: extractValue(row, columnMap.recordRef).toUpperCase(),
                         city: extractValue(row, columnMap.city),
                         district:
                             extractValue(row, columnMap.district) ||
@@ -455,6 +455,24 @@ export async function POST(request: Request) {
         try {
             if (allValidRecords.length > 0) {
                 await db.collection("records").insertMany(allValidRecords);
+
+                // Sync new company and transporter names to options collection
+                const newCompanies = [...new Set(allValidRecords.map((r) => r.companyName).filter(Boolean) as string[])];
+                if (newCompanies.length > 0) {
+                    await db.collection("options").updateOne(
+                        { type: "company" },
+                        { $addToSet: { values: { $each: newCompanies } }, $setOnInsert: { createdAt: new Date() }, $set: { updatedAt: new Date() } },
+                        { upsert: true }
+                    );
+                }
+                const newTransporters = [...new Set(allValidRecords.map((r) => r.transporterName).filter(Boolean) as string[])];
+                if (newTransporters.length > 0) {
+                    await db.collection("options").updateOne(
+                        { type: "transporter" },
+                        { $addToSet: { values: { $each: newTransporters } }, $setOnInsert: { createdAt: new Date() }, $set: { updatedAt: new Date() } },
+                        { upsert: true }
+                    );
+                }
             }
 
             return NextResponse.json({

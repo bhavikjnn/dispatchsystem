@@ -12,6 +12,7 @@ interface ComboboxProps {
     className?: string;
     allowCreate?: boolean;
     optionType?: string; // For saving to MongoDB
+    emptyText?: string;
 }
 
 export function Combobox({
@@ -25,6 +26,7 @@ export function Combobox({
 }: ComboboxProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [inputValue, setInputValue] = useState(value);
+    const [highlightedIndex, setHighlightedIndex] = useState(-1);
     const inputRef = useRef<HTMLInputElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const isSelectingRef = useRef(false);
@@ -32,6 +34,11 @@ export function Combobox({
     useEffect(() => {
         setInputValue(value);
     }, [value]);
+
+    // Reset highlight when options list changes or dropdown closes
+    useEffect(() => {
+        setHighlightedIndex(-1);
+    }, [isOpen, inputValue]);
 
     const filteredOptions = options.filter((option) =>
         option.toLowerCase().includes(inputValue.toLowerCase()),
@@ -43,6 +50,9 @@ export function Combobox({
         !filteredOptions.some(
             (option) => option.toLowerCase() === inputValue.toLowerCase(),
         );
+
+    // Total navigable items: filtered options + optional "create" entry
+    const totalItems = filteredOptions.length + (showCreateOption ? 1 : 0);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newValue = e.target.value;
@@ -83,6 +93,46 @@ export function Combobox({
         }
     };
 
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (!isOpen && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+            setIsOpen(true);
+            return;
+        }
+
+        switch (e.key) {
+            case "ArrowDown":
+                e.preventDefault();
+                setHighlightedIndex((prev) =>
+                    totalItems === 0 ? -1 : (prev + 1) % totalItems,
+                );
+                break;
+            case "ArrowUp":
+                e.preventDefault();
+                setHighlightedIndex((prev) =>
+                    totalItems === 0
+                        ? -1
+                        : prev <= 0
+                          ? totalItems - 1
+                          : prev - 1,
+                );
+                break;
+            case "Enter":
+                e.preventDefault();
+                if (highlightedIndex >= 0 && highlightedIndex < totalItems) {
+                    if (highlightedIndex < filteredOptions.length) {
+                        handleSelectOption(filteredOptions[highlightedIndex]);
+                    } else if (showCreateOption) {
+                        handleSelectOption(inputValue, true);
+                    }
+                }
+                break;
+            case "Escape":
+                setIsOpen(false);
+                setHighlightedIndex(-1);
+                break;
+        }
+    };
+
     const handleInputFocus = () => {
         setIsOpen(true);
     };
@@ -94,6 +144,11 @@ export function Combobox({
             setTimeout(() => {
                 if (!isSelectingRef.current) {
                     setIsOpen(false);
+                    // For non-creatable dropdowns, restore the confirmed value
+                    // so stale typed text doesn't linger in the input
+                    if (!allowCreate) {
+                        setInputValue(value);
+                    }
                 }
             }, 300);
         }
@@ -118,6 +173,16 @@ export function Combobox({
         };
     }, []);
 
+    // Scroll highlighted item into view
+    useEffect(() => {
+        if (highlightedIndex >= 0 && dropdownRef.current) {
+            const items =
+                dropdownRef.current.querySelectorAll("[data-option-item]");
+            const el = items[highlightedIndex] as HTMLElement | undefined;
+            el?.scrollIntoView({ block: "nearest" });
+        }
+    }, [highlightedIndex]);
+
     return (
         <div className="relative w-full">
             <input
@@ -127,6 +192,7 @@ export function Combobox({
                 onChange={handleInputChange}
                 onFocus={handleInputFocus}
                 onBlur={handleInputBlur}
+                onKeyDown={handleKeyDown}
                 placeholder={placeholder}
                 className={cn(
                     "w-full px-4 py-2 border border-border rounded-lg text-sm bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent",
@@ -141,13 +207,17 @@ export function Combobox({
                     {filteredOptions.map((option, index) => (
                         <div
                             key={index}
+                            data-option-item
                             onMouseDown={(e) => {
                                 e.preventDefault();
                                 handleSelectOption(option);
                             }}
+                            onMouseEnter={() => setHighlightedIndex(index)}
                             className={cn(
                                 "px-4 py-2 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground",
                                 option === value && "bg-accent/50",
+                                highlightedIndex === index &&
+                                    "bg-accent text-accent-foreground",
                             )}
                         >
                             {option}
@@ -155,11 +225,19 @@ export function Combobox({
                     ))}
                     {showCreateOption && (
                         <div
+                            data-option-item
                             onMouseDown={(e) => {
                                 e.preventDefault();
                                 handleSelectOption(inputValue, true);
                             }}
-                            className="px-4 py-2 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground border-t border-border text-primary"
+                            onMouseEnter={() =>
+                                setHighlightedIndex(filteredOptions.length)
+                            }
+                            className={cn(
+                                "px-4 py-2 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground border-t border-border text-primary",
+                                highlightedIndex === filteredOptions.length &&
+                                    "bg-accent text-accent-foreground",
+                            )}
                         >
                             Create "{inputValue}"
                         </div>

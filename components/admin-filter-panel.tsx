@@ -29,6 +29,7 @@ export default function AdminFilterPanel({ onFilter }: FilterPanelProps) {
     });
 
     const [companies, setCompanies] = useState<string[]>([]);
+    const [transporters, setTransporters] = useState<string[]>([]);
     const [countries, setCountries] = useState<string[]>([]);
     const [states, setStates] = useState<string[]>([]);
     const [cities, setCities] = useState<string[]>([]);
@@ -76,6 +77,11 @@ export default function AdminFilterPanel({ onFilter }: FilterPanelProps) {
             .then((data) => setCompanies(data.options || []))
             .catch((err) => console.error("Failed to load companies:", err));
 
+        fetch("/api/options?type=transporter")
+            .then((res) => res.json())
+            .then((data) => setTransporters(data.options || []))
+            .catch((err) => console.error("Failed to load transporters:", err));
+
         fetch("/api/options?type=itemCategory")
             .then((res) => res.json())
             .then((data) => setItemCategories(data.options || []))
@@ -90,7 +96,10 @@ export default function AdminFilterPanel({ onFilter }: FilterPanelProps) {
     };
 
     const handleComboboxChange = (name: string, value: string) => {
-        setFilters((prev) => ({ ...prev, [name]: value }));
+        const newFilters = { ...filters, [name]: value };
+        setFilters(newFilters);
+        // Auto-apply immediately so Apply Filters never gets a stale closure
+        onFilter(newFilters);
 
         // Load dependent dropdowns
         if (name === "country" && value) {
@@ -360,13 +369,14 @@ export default function AdminFilterPanel({ onFilter }: FilterPanelProps) {
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
-                            <Input
-                                type="text"
-                                name="transporter"
+                            <Combobox
+                                options={transporters}
                                 value={filters.transporter}
-                                onChange={handleChange}
+                                onChange={(value) =>
+                                    handleComboboxChange("transporter", value)
+                                }
                                 placeholder="Transporter..."
-                                className="w-full"
+                                allowCreate={false}
                             />
                         </div>
                         <div>
