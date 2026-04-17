@@ -1,6 +1,20 @@
 import clientPromise from "../lib/mongodb";
 import { ITEM_CATEGORIES } from "../lib/item-descriptions";
 
+const TRANSPORTER_OPTIONS = [
+    "New Kaushik Transport",
+    "New Haryana Punjab Transport",
+    "Haryana Punjab Transport",
+    "V-Trans India",
+    "TCI Express",
+    "TCI Freight",
+    "ATC Logistics",
+    "Shivans Logistics",
+    "Self Pickup",
+    "DTDC",
+    "By Tempo",
+];
+
 async function seedOptions() {
     try {
         const client = await clientPromise;
@@ -36,6 +50,18 @@ async function seedOptions() {
                 { upsert: true }
             );
         }
+
+        await db.collection("options").updateOne(
+            { type: "transporter" },
+            {
+                $set: {
+                    values: TRANSPORTER_OPTIONS,
+                    updatedAt: new Date(),
+                },
+                $setOnInsert: { createdAt: new Date() },
+            },
+            { upsert: true }
+        );
 
         console.log("Options seeded successfully!");
         process.exit(0);

@@ -3,6 +3,15 @@ import { getCurrentUser } from "@/lib/auth";
 import clientPromise from "@/lib/mongodb";
 import { ITEM_CATEGORIES, ITEM_CATEGORY_LIST } from "@/lib/item-descriptions";
 
+function normalizeOptionValues(values: unknown[]): string[] {
+    return [...new Set(
+        values
+            .filter((value): value is string => typeof value === "string")
+            .map((value) => value.trim())
+            .filter(Boolean),
+    )].sort((a, b) => a.localeCompare(b));
+}
+
 // Auto-seed if empty
 async function ensureSeeded(db: any) {
     const count = await db.collection("options").countDocuments();
@@ -71,38 +80,44 @@ export async function GET(request: NextRequest) {
 
             // Fallback to hardcoded lists if not in DB
             let values = optionDoc?.values || [];
-            if (values.length === 0) {
-                if (type === "itemCategory") {
-                    values = ITEM_CATEGORY_LIST;
-                } else if (type.startsWith("itemSubcategory_")) {
-                    const category = type.replace("itemSubcategory_", "");
-                    values =
-                        ITEM_CATEGORIES[
-                            category as keyof typeof ITEM_CATEGORIES
-                        ] || [];
-                } else if (type === "company") {
-                    // Get companies from records if not in options
-                    const distinctCompanies = await db
-                        .collection("records")
-                        .distinct("companyName");
-                    values = distinctCompanies.filter(Boolean).sort();
-                } else if (type === "transporter") {
-                    // Get transporters from records if not in options
-                    const distinctTransporters = await db
-                        .collection("records")
-                        .distinct("transporterName");
-                    values = distinctTransporters.filter(Boolean).sort();
-                }
+            if (type === "itemCategory") {
+                values = values.length > 0 ? values : ITEM_CATEGORY_LIST;
+            } else if (type.startsWith("itemSubcategory_")) {
+                const category = type.replace("itemSubcategory_", "");
+                values =
+                    values.length > 0
+                        ? values
+                        : ITEM_CATEGORIES[
+                              category as keyof typeof ITEM_CATEGORIES
+                          ] || [];
+            } else if (type === "company") {
+                const distinctCompanies = await db
+                    .collection("records")
+                    .distinct("companyName");
+                values = normalizeOptionValues([
+                    ...values,
+                    ...distinctCompanies,
+                ]);
+            } else if (type === "transporter") {
+                const distinctTransporters = await db
+                    .collection("records")
+                    .distinct("transporterName");
+                values = normalizeOptionValues([
+                    ...values,
+                    ...distinctTransporters,
+                ]);
             }
 
-            return NextResponse.json({ options: values });
+            return NextResponse.json({
+                options: normalizeOptionValues(values),
+            });
         }
 
         // Get all options
         const allOptions = await db.collection("options").find({}).toArray();
         const optionsMap: Record<string, string[]> = {};
         allOptions.forEach((doc) => {
-            optionsMap[doc.type] = doc.values || [];
+            optionsMap[doc.type] = normalizeOptionValues(doc.values || []);
         });
 
         return NextResponse.json({ options: optionsMap });

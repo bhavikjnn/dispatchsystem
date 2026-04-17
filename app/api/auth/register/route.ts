@@ -11,9 +11,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
-    if (role !== "admin" && role !== "employee") {
-      return NextResponse.json({ error: "Invalid role" }, { status: 400 })
+    if (role && role !== "employee") {
+      return NextResponse.json({ error: "Administrator accounts cannot be created from signup" }, { status: 403 })
     }
+
+    const userRole = "employee"
 
     const client = await clientPromise
     const db = client.db("order-dispatch")
@@ -28,11 +30,11 @@ export async function POST(request: NextRequest) {
       email,
       password: hashedPassword,
       name,
-      role,
+      role: userRole,
       createdAt: new Date(),
     })
 
-    const token = await createToken(result.insertedId.toString(), email, role)
+    const token = await createToken(result.insertedId.toString(), email, userRole)
 
     const cookieStore = await cookies()
     cookieStore.set("auth_token", token, {
@@ -48,7 +50,7 @@ export async function POST(request: NextRequest) {
         id: result.insertedId,
         email,
         name,
-        role,
+        role: userRole,
       },
     }, { status: 201 })
   } catch (error) {

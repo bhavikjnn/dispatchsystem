@@ -2,6 +2,15 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getCurrentUser } from "@/lib/auth"
 import clientPromise from "@/lib/mongodb"
 
+function normalizeValues(values: unknown[]): string[] {
+  return [...new Set(
+    values
+      .filter((value): value is string => typeof value === "string")
+      .map((value) => value.trim())
+      .filter(Boolean),
+  )].sort((a, b) => a.localeCompare(b))
+}
+
 export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser()
@@ -21,11 +30,11 @@ export async function GET(request: NextRequest) {
     ])
 
     return NextResponse.json({
-      companies: (companies || []).sort(),
-      destinations: (destinations || []).sort(),
-      transporters: (transporters || []).sort(),
-      bookingTypes: (bookingTypes || []).sort(),
-      paymentStatuses: (paymentStatuses || []).sort(),
+      companies: normalizeValues(companies || []),
+      destinations: normalizeValues(destinations || []),
+      transporters: normalizeValues(transporters || []),
+      bookingTypes: normalizeValues(bookingTypes || []),
+      paymentStatuses: normalizeValues(paymentStatuses || []),
     })
   } catch (error) {
     console.error("Filter options error:", error)

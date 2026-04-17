@@ -19,7 +19,6 @@ export default function AuthForm({ isLogin = true, onSuccess }: AuthFormProps) {
         email: "",
         password: "",
         name: "",
-        role: "employee",
     });
 
     const handleChange = (
@@ -64,7 +63,11 @@ export default function AuthForm({ isLogin = true, onSuccess }: AuthFormProps) {
                 body: JSON.stringify(
                     isLogin
                         ? { email: formData.email, password: formData.password }
-                        : formData
+                        : {
+                              email: formData.email,
+                              password: formData.password,
+                              name: formData.name,
+                          }
                 ),
             });
 
@@ -163,28 +166,6 @@ export default function AuthForm({ isLogin = true, onSuccess }: AuthFormProps) {
                             onChange={handleChange}
                             required
                         />
-
-                        {!isLogin && (
-                            <select
-                                name="role"
-                                value={formData.role}
-                                onChange={handleChange}
-                                className="w-full px-5 py-3 rounded-xl bg-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 border border-white/10 transition"
-                            >
-                                <option
-                                    value="employee"
-                                    className="bg-[#1e293b] text-white"
-                                >
-                                    Employee
-                                </option>
-                                <option
-                                    value="admin"
-                                    className="bg-[#1e293b] text-white"
-                                >
-                                    Administrator
-                                </option>
-                            </select>
-                        )}
                     </div>
 
                     <button

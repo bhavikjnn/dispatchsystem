@@ -17,12 +17,19 @@ import { Card } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
 import { ITEM_CATEGORY_LIST, getSubcategories } from "@/lib/item-descriptions";
 
-const BOOKING_TYPES = ["Standard", "Express", "Priority", "Door Delivery"];
+const BOOKING_TYPES = [
+    "Standard",
+    "Express",
+    "Priority",
+    "Door Delivery",
+    "Godown Delivery",
+];
 const PAYMENT_TYPES = ["Paid", "To Pay"];
 const PAYMENT_DETAILS_OPTIONS = [
     "100% Advance Received",
     "100% Against Delivery",
     "50% Advance, 50% Against Delivery",
+    "COD basis",
     "NEFT Payment",
     "Credit Term 30 Days",
     "Bank Transfer",

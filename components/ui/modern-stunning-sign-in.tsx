@@ -17,7 +17,6 @@ const ModernStunningSignIn = ({
     const [email, setEmail] = React.useState("");
     const [password, setPassword] = React.useState("");
     const [name, setName] = React.useState("");
-    const [role, setRole] = React.useState("employee");
     const [error, setError] = React.useState("");
     const [loading, setLoading] = React.useState(false);
 
@@ -56,7 +55,7 @@ const ModernStunningSignIn = ({
                 body: JSON.stringify(
                     isLogin
                         ? { email, password }
-                        : { email, password, name, role }
+                        : { email, password, name }
                 ),
             });
 
@@ -139,28 +138,6 @@ const ModernStunningSignIn = ({
                             onChange={(e) => setPassword(e.target.value)}
                             required
                         />
-
-                        {!isLogin && (
-                            <select
-                                value={role}
-                                onChange={(e) => setRole(e.target.value)}
-                                className="w-full px-4 py-3 rounded-lg bg-input text-foreground text-sm border border-border focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
-                            >
-                                <option
-                                    value="employee"
-                                    className="bg-card text-foreground"
-                                >
-                                    Employee
-                                </option>
-                                <option
-                                    value="admin"
-                                    className="bg-card text-foreground"
-                                >
-                                    Administrator
-                                </option>
-                            </select>
-                        )}
-
                         {error && (
                             <div className="text-sm text-destructive text-left bg-destructive/10 border border-destructive/20 rounded-lg p-3">
                                 {error}

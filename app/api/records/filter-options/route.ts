@@ -2,6 +2,15 @@ import { type NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import clientPromise from "@/lib/mongodb";
 
+function normalizeValues(values: unknown[]): string[] {
+    return [...new Set(
+        values
+            .filter((value): value is string => typeof value === "string")
+            .map((value) => value.trim())
+            .filter(Boolean),
+    )].sort((a, b) => a.localeCompare(b));
+}
+
 export async function GET(request: NextRequest) {
     try {
         const user = await getCurrentUser();
@@ -19,14 +28,14 @@ export async function GET(request: NextRequest) {
         const companiesDoc = await db
             .collection("options")
             .findOne({ type: "company" });
-        let companies = companiesDoc?.values || [];
+        let companies = normalizeValues(companiesDoc?.values || []);
 
         // If no companies in options, get from records and seed options
         if (companies.length === 0) {
             const distinctCompanies = await db
                 .collection("records")
                 .distinct("companyName");
-            companies = distinctCompanies.filter(Boolean).sort();
+            companies = normalizeValues(distinctCompanies);
 
             // Seed options collection if we found companies
             if (companies.length > 0) {
@@ -57,11 +66,11 @@ export async function GET(request: NextRequest) {
 
             return NextResponse.json({
                 companies,
-                cities: cities.filter(Boolean).sort(),
-                states: states.filter(Boolean).sort(),
-                countries: countries.filter(Boolean).sort(),
-                transporters: transporters.filter(Boolean).sort(),
-                bookingTypes: bookingTypes.filter(Boolean).sort(),
+                cities: normalizeValues(cities),
+                states: normalizeValues(states),
+                countries: normalizeValues(countries),
+                transporters: normalizeValues(transporters),
+                bookingTypes: normalizeValues(bookingTypes),
             });
         }
 
