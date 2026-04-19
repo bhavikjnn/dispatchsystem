@@ -98,14 +98,6 @@ export async function GET(request: NextRequest) {
                     ...values,
                     ...distinctCompanies,
                 ]);
-            } else if (type === "transporter") {
-                const distinctTransporters = await db
-                    .collection("records")
-                    .distinct("transporterName");
-                values = normalizeOptionValues([
-                    ...values,
-                    ...distinctTransporters,
-                ]);
             }
 
             return NextResponse.json({

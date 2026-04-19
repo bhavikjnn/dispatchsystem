@@ -5,13 +5,12 @@ const TRANSPORTER_OPTIONS = [
     "New Haryana Punjab Transport",
     "Haryana Punjab Transport",
     "V-Trans India",
-    "TCI Express",
+    "TCI EXPRESS",
     "TCI Freight",
     "ATC Logistics",
     "Shivans Logistics",
     "Self Pickup",
     "DTDC",
-    "By Tempo",
 ];
 
 async function updateTransporterOptions() {
