@@ -13,6 +13,7 @@ interface ComboboxProps {
     allowCreate?: boolean;
     optionType?: string; // For saving to MongoDB
     emptyText?: string;
+    autoFocus?: boolean;
 }
 
 export function Combobox({
@@ -23,6 +24,7 @@ export function Combobox({
     className,
     allowCreate = true,
     optionType,
+    autoFocus,
 }: ComboboxProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [inputValue, setInputValue] = useState(value);
@@ -194,6 +196,7 @@ export function Combobox({
                 onBlur={handleInputBlur}
                 onKeyDown={handleKeyDown}
                 placeholder={placeholder}
+                autoFocus={autoFocus}
                 className={cn(
                     "w-full px-4 py-2 border border-border rounded-lg text-sm bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent",
                     className,

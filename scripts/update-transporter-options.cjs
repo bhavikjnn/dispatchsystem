@@ -11,6 +11,8 @@ const TRANSPORTER_OPTIONS = [
     "Shivans Logistics",
     "Self Pickup",
     "DTDC",
+    "OM Logistics",
+    "Accurate Transport",
 ];
 
 async function updateTransporterOptions() {

@@ -4,12 +4,10 @@ import type React from "react";
 import { useState, useEffect, useRef } from "react";
 
 function getInvoicePrefix(): string {
-    // const now = new Date();
-    // const month = now.getMonth(); // 0-indexed; April = 3
-    // const year = now.getFullYear();
-    // const fyStart = month >= 3 ? year : year - 1;
-    // TEMPORARY: hardcoded to FY 25-26; revert when switching to 26-27
-    const fyStart = 2025;
+    const now = new Date();
+    const month = now.getMonth(); // 0-indexed; April = 3
+    const year = now.getFullYear();
+    const fyStart = month >= 3 ? year : year - 1;
     const fyEnd = fyStart + 1;
     return `TM/${String(fyStart).slice(-2)}-${String(fyEnd).slice(-2)}/`;
 }
@@ -385,6 +383,10 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
 
             setSuccess(true);
             formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+            setTimeout(() => {
+                const firstInput = formRef.current?.querySelector<HTMLInputElement>("input");
+                firstInput?.focus();
+            }, 50);
             setFormData({
                 companyName: "",
                 contactPerson: "",
@@ -473,6 +475,7 @@ export default function RecordForm({ onSuccess }: { onSuccess?: () => void }) {
                             placeholder="Select or create company..."
                             allowCreate={true}
                             optionType="company"
+                            autoFocus
                         />
                     </div>
                     <div>
